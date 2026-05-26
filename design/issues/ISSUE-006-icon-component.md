@@ -13,6 +13,7 @@ depends_on: []
 ## Summary
 
 Create a reusable `Icon` primitive that renders inline SVGs from a **public enum** with consistent sizing.
+For the icons import the iconify MingCute icon pack from: https://icon-sets.iconify.design/mingcute/ into the app assets.
 
 ## Requirements
 
