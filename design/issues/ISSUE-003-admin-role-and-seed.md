@@ -1,7 +1,7 @@
 ---
 id: ISSUE-003
 title: Admin role and bootstrap seed
-status: pending
+status: done
 type: coding
 layer: BE
 phase: 0

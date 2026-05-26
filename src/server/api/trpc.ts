@@ -166,3 +166,26 @@ export const protectedProcedure = t.procedure
       },
     });
   });
+
+/**
+ * Admin-only procedure — requires `User.role === admin`.
+ */
+export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  const user = await ctx.db.user.findUnique({
+    where: { id: ctx.session.user.id },
+    select: { role: true },
+  });
+
+  if (user?.role !== "admin") {
+    throw new TRPCError({ code: "FORBIDDEN" });
+  }
+
+  return next({
+    ctx: {
+      session: {
+        ...ctx.session,
+        user: { ...ctx.session.user, role: user.role },
+      },
+    },
+  });
+});
