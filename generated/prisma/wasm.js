@@ -181,7 +181,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/home/heatforge/Coding/chatterbox/generated/prisma",
+      "value": "/home/heatforge/.cursor/worktrees/phase0-fe-c6958dff/chatterbox-da9ea8f825ce/generated/prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -195,12 +195,11 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/home/heatforge/Coding/chatterbox/prisma/schema.prisma",
+    "sourceFilePath": "/home/heatforge/.cursor/worktrees/phase0-fe-c6958dff/chatterbox-da9ea8f825ce/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": null,
-    "schemaEnvPath": "../../.env"
+    "rootEnvPath": null
   },
   "relativePath": "../../prisma",
   "clientVersion": "6.19.3",
@@ -209,6 +208,7 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {

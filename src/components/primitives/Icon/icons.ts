@@ -1,0 +1,20 @@
+/** Public icon identifiers (MingCute via Iconify assets). */
+export enum AppIcon {
+  Send = "send",
+  Attach = "attach",
+  Copy = "copy",
+  Retry = "retry",
+  ChevronLeft = "chevronLeft",
+  ChevronRight = "chevronRight",
+  Redo = "redo",
+  Settings = "settings",
+  Admin = "admin",
+  Chat = "chat",
+  Folder = "folder",
+  Upload = "upload",
+  Trash = "trash",
+  Close = "close",
+  Menu = "menu",
+  Sun = "sun",
+  Moon = "moon",
+}

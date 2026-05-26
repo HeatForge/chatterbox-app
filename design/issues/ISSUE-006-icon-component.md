@@ -1,7 +1,7 @@
 ---
 id: ISSUE-006
 title: Icon component with AppIcon enum
-status: pending
+status: done
 type: coding
 layer: FE
 phase: 0
@@ -28,9 +28,9 @@ Create a reusable `Icon` primitive that renders inline SVGs from a **public enum
 
 ## Acceptance criteria
 
-- [ ] All listed icons render at three scales
-- [ ] Used in NavBar and at least one chat primitive
-- [ ] No raw inline SVG duplicated outside `Icon` folder
+- [x] All listed icons render at three scales
+- [x] Used in NavBar and at least one chat primitive
+- [x] No raw inline SVG duplicated outside `Icon` folder
 
 ## References
 
