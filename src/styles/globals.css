@@ -1,5 +1,14 @@
-/* Semantic tokens — full light/dark themes in ISSUE-007 */
+/*
+ * Overlay z-index scale (lowest → highest):
+ * modal backdrop → modal dialog → toast → popover
+ */
 :root {
+  --z-modal-backdrop: 100;
+  --z-modal: 110;
+  --z-toast: 120;
+  --z-popover: 130;
+
+  /* Semantic tokens — full light/dark themes in ISSUE-007 */
   --color-bg: #ffffff;
   --color-bg-subtle: #f4f4f5;
   --color-surface: #fafafa;

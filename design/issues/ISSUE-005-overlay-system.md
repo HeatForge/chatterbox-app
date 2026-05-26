@@ -1,7 +1,7 @@
 ---
 id: ISSUE-005
 title: Overlay system (modals, pop-ups, toasts)
-status: pending
+status: done
 type: coding
 layer: FE
 phase: 0
@@ -28,9 +28,9 @@ Build **intelligent** shared overlay primitives: toast queue, modal stack, and a
 
 ## Acceptance criteria
 
-- [ ] Demo toast and confirm modal from `/settings` or Storybook-style test button
-- [ ] Focus returns to trigger element on modal close
-- [ ] Feature issues (delete chat, etc.) use overlay API only
+- [x] Demo toast and confirm modal from `/settings` or Storybook-style test button
+- [x] Focus returns to trigger element on modal close
+- [x] Feature issues (delete chat, etc.) use overlay API only
 
 ## References
 
