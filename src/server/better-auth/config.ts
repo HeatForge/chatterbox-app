@@ -1,21 +1,48 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 
-import { env } from "~/env";
 import { db } from "~/server/db";
+import { isEmailWhitelisted, normalizeEmail } from "~/server/auth/whitelist";
 
 export const auth = betterAuth({
   database: prismaAdapter(db, {
-    provider: "postgresql", // or "sqlite" or "mysql"
+    provider: "postgresql",
   }),
   emailAndPassword: {
     enabled: true,
   },
-  socialProviders: {
-    github: {
-      clientId: env.BETTER_AUTH_GITHUB_CLIENT_ID,
-      clientSecret: env.BETTER_AUTH_GITHUB_CLIENT_SECRET,
-      redirectURI: "http://localhost:3000/api/auth/callback/github",
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/sign-up/email") {
+        return;
+      }
+      const email = ctx.body?.email;
+      if (typeof email !== "string" || !(await isEmailWhitelisted(email))) {
+        throw new APIError("UNPROCESSABLE_ENTITY", {
+          message: "This email is not authorized to register.",
+        });
+      }
+    }),
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          const email = user.email;
+          if (!email || !(await isEmailWhitelisted(email))) {
+            throw new APIError("UNPROCESSABLE_ENTITY", {
+              message: "This email is not authorized to register.",
+            });
+          }
+          return {
+            data: {
+              ...user,
+              email: normalizeEmail(email),
+            },
+          };
+        },
+      },
     },
   },
 });

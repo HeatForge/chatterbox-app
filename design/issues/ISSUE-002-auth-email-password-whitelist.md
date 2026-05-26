@@ -1,7 +1,7 @@
 ---
 id: ISSUE-002
 title: Email/password auth and email whitelist
-status: pending
+status: done
 type: coding
 layer: fullstack
 phase: 0
