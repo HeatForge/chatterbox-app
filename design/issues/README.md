@@ -51,8 +51,58 @@ Granular implementation tasks derived from the [roadmap](../roadmap.md). Each fi
 | [ISSUE-033](./ISSUE-033-connectors-sync.md) | Local and GitHub connectors | coding | BE | 5 | pending |
 | [ISSUE-034](./ISSUE-034-tools-function-calling.md) | Tool toggles and function calling | coding | fullstack | 6 | pending |
 
+## GitHub Issues sync
+
+Markdown files in this directory are mirrored to **GitHub Issues** by the [sync-design-issues](../../.github/workflows/sync-design-issues.yml) workflow.
+
+### Source of truth
+
+**The repo wins.** Edit frontmatter or body here, push to `main` / `master`, and the workflow creates or updates the matching GitHub issue. Edits made only in the GitHub UI (title, body, labels) are **overwritten** on the next sync.
+
+### What gets synced
+
+| Frontmatter | GitHub |
+|-------------|--------|
+| `id` + `title` | Issue title: `[ISSUE-001] …` |
+| `status: pending` / `in_progress` / `blocked` | Open + label `status:…` |
+| `status: done` | Closed |
+| `type`, `layer`, `phase` | Labels `type:…`, `layer:…`, `phase:…` |
+| `phase` | Milestone `Phase N` (created if missing) |
+| Markdown body | Issue description (with meta table + link back to this file) |
+
+All synced issues receive the label **`chatterbox-design`** for filtering in the GitHub UI.
+
+### Updating status
+
+```yaml
+status: in_progress   # → open on GitHub
+status: done          # → closed on GitHub
+```
+
+Commit and push to **`main`** on **`HeatForge/chatterbox-app`**; the workflow runs when `design/issues/**` changes.
+
+### Security
+
+- Sync runs **only** on push to `main` (including merges into `main`), never on `pull_request` from forks.
+- Repository and branch are **hard-coded** in the workflow and validated again in the sync script.
+- The script does not use `${{ github.repository }}` or other workflow context for API targets.
+
+If you rename the GitHub repo, update `CHATTERBOX_REPOSITORY` in [sync-design-issues.yml](../../.github/workflows/sync-design-issues.yml) and `EXPECTED_REPOSITORY` in [sync-design-issues.mjs](../../.github/scripts/sync-design-issues.mjs).
+
+### Manual run
+
+1. Open **Actions** → **Sync design issues to GitHub** → **Run workflow** (must be triggered on the `main` branch)
+2. Optional: enable **dry_run** to log actions without API writes
+
+### First-time setup
+
+After pushing the workflow to GitHub `main`, run it once (push or manual dispatch on `main`). You should see 34 issues created with milestones **Phase 0**–**Phase 6**.
+
+Filter in GitHub: `label:chatterbox-design` or use milestone / label columns in Projects.
+
 ## How to use
 
 1. Pick an issue with `status: pending` and satisfied `depends_on`.
 2. Implement per requirements; update parent docs if behavior changes.
 3. Set `status: done` in the issue frontmatter when acceptance criteria pass.
+4. Push — GitHub issue state updates on the next workflow run.

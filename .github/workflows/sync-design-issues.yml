@@ -1,0 +1,64 @@
+name: Sync design issues to GitHub
+
+# Hard-coded target repository and branch. Update both if the repo is renamed or transferred.
+env:
+  CHATTERBOX_REPOSITORY: HeatForge/chatterbox-app
+  CHATTERBOX_DEFAULT_BRANCH: main
+
+on:
+  # Only after commits land on main (includes merges via "Merge" button — not pull_request).
+  push:
+    branches: [main]
+    paths:
+      - "design/issues/**"
+      - ".github/workflows/sync-design-issues.yml"
+      - ".github/scripts/sync-design-issues.mjs"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview changes without writing to GitHub"
+        required: false
+        type: boolean
+        default: false
+
+# Do not grant issues:write on pull_request from forks — this workflow never runs there.
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: sync-design-issues-${{ github.repository }}
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # Belt-and-suspenders: refuse to run outside the canonical repo and main branch.
+    if: |
+      github.repository == 'HeatForge/chatterbox-app' &&
+      github.ref == 'refs/heads/main'
+    steps:
+      - name: Verify repository and branch
+        run: |
+          set -euo pipefail
+          if [ "${{ github.repository }}" != "${{ env.CHATTERBOX_REPOSITORY }}" ]; then
+            echo "::error::Unexpected repository: ${{ github.repository }}"
+            exit 1
+          fi
+          if [ "${{ github.ref }}" != "refs/heads/${{ env.CHATTERBOX_DEFAULT_BRANCH }}" ]; then
+            echo "::error::Sync only runs on refs/heads/${{ env.CHATTERBOX_DEFAULT_BRANCH }}"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Sync design/issues to GitHub Issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHATTERBOX_REPOSITORY: HeatForge/chatterbox-app
+          CHATTERBOX_DEFAULT_BRANCH: main
+          DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+        run: node .github/scripts/sync-design-issues.mjs

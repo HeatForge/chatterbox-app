@@ -373,7 +373,7 @@ Provider API keys are stored in the database after admin setup, not in `.env`.
 - [Data model](./data-model.md) — Prisma entities and invariants
 - [Features](./features.md) — UX and API mapping per route
 - [Roadmap](./roadmap.md) — Implementation phases
-- [Issues](./issues/README.md) — Granular tasks with status metadata
+- [Issues](./issues/README.md) — Granular tasks with status metadata (synced to GitHub Issues via CI)
 - [UI composition](./ui-composition.md) — Flat component rules
 - [UI layout mockup](./ui-layout.html) — Static greybox per route
 
