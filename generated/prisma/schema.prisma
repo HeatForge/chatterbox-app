@@ -1,43 +1,66 @@
-// Prisma schema for Better Auth
+// Prisma schema for Better Auth + Chatterbox domain
 // learn more: https://better-auth.com/docs/concepts/database
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../generated/prisma"
+  provider        = "prisma-client-js"
+  output          = "../generated/prisma"
+  previewFeatures = ["postgresqlExtensions"]
 }
-
-// NOTE: When using mysql or sqlserver, uncomment the //@db.Text annotations in model Account below
-// Further reading:
-// https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector", schema: "public")]
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+enum UserRole {
+  user
+  admin
+}
 
-  createdBy   User   @relation(fields: [createdById], references: [id])
-  createdById String
+enum MessageRole {
+  user
+  assistant
+  system
+  tool
+}
 
-  @@index([name])
+enum DocumentSourceType {
+  upload
+  local_path
+  github
+}
+
+enum ConnectorSyncStatus {
+  pending
+  syncing
+  ready
+  failed
+}
+
+enum JobStatus {
+  pending
+  running
+  completed
+  failed
 }
 
 model User {
-  id            String    @id
-  name          String //@db.Text
+  id            String   @id
+  name          String
   email         String
-  emailVerified Boolean   @default(false)
-  image         String? //@db.Text
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  posts         Post[]
+  emailVerified Boolean  @default(false)
+  image         String?
+  role          UserRole @default(user)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  sessions             Session[]
+  accounts             Account[]
+  chatThreads          ChatThread[]
+  projects             Project[]
+  userSettings         UserSettings?
+  allowedEmailsCreated AllowedEmail[] @relation("AllowedEmailCreatedBy")
 
   @@unique([email])
   @@map("user")
@@ -49,8 +72,8 @@ model Session {
   token     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  ipAddress String? //@db.Text
-  userAgent String? //@db.Text
+  ipAddress String?
+  userAgent String?
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -60,17 +83,17 @@ model Session {
 
 model Account {
   id                    String    @id
-  accountId             String //@db.Text
-  providerId            String //@db.Text
+  accountId             String
+  providerId            String
   userId                String
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accessToken           String? //@db.Text
-  refreshToken          String? //@db.Text
-  idToken               String? //@db.Text
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
   accessTokenExpiresAt  DateTime?
   refreshTokenExpiresAt DateTime?
-  scope                 String? //@db.Text
-  password              String? //@db.Text
+  scope                 String?
+  password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -79,11 +102,217 @@ model Account {
 
 model Verification {
   id         String   @id
-  identifier String //@db.Text
-  value      String //@db.Text
+  identifier String
+  value      String
   expiresAt  DateTime
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now()) @updatedAt
 
   @@map("verification")
+}
+
+model AllowedEmail {
+  id          String   @id @default(cuid())
+  email       String
+  note        String?
+  createdAt   DateTime @default(now())
+  createdById String?
+  createdBy   User?    @relation("AllowedEmailCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([email])
+  @@map("allowed_email")
+}
+
+model ChatThread {
+  id                  String    @id @default(cuid())
+  userId              String
+  projectId           String?
+  parentChatId        String?
+  forkedFromMessageId String?
+  depth               Int       @default(0)
+  path                String
+  title               String
+  hiddenAt            DateTime?
+  sortOrder           Int       @default(0)
+  systemPrompt        String?   @db.Text
+  samplerSettings     Json?
+  enabledTools        Json?
+  activeModelId       String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  parent    ChatThread?      @relation("ChatThreadFork", fields: [parentChatId], references: [id], onDelete: SetNull)
+  children  ChatThread[]     @relation("ChatThreadFork")
+  messages  Message[]
+  summaries ProjectSummary[]
+
+  @@index([userId, hiddenAt, updatedAt])
+  @@index([userId, projectId])
+  @@index([parentChatId])
+  @@index([path])
+  @@map("chat_thread")
+}
+
+model Message {
+  id              String      @id @default(cuid())
+  chatId          String
+  role            MessageRole
+  content         Json
+  parentMessageId String?
+  ordinal         Int
+  variantGroupId  String?
+  createdAt       DateTime    @default(now())
+
+  chat     ChatThread       @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  parent   Message?         @relation("MessageChain", fields: [parentMessageId], references: [id], onDelete: SetNull)
+  children Message[]        @relation("MessageChain")
+  variants MessageVariant[]
+
+  @@unique([chatId, ordinal])
+  @@index([chatId, createdAt])
+  @@index([variantGroupId])
+  @@map("message")
+}
+
+model MessageVariant {
+  id             String   @id @default(cuid())
+  messageId      String
+  variantGroupId String
+  variantIndex   Int
+  content        Json
+  isActive       Boolean  @default(false)
+  status         String
+  errorMessage   String?
+  createdAt      DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([variantGroupId, variantIndex])
+  @@index([messageId])
+  @@map("message_variant")
+}
+
+model Project {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  description     String?  @db.Text
+  systemPrompt    String?  @db.Text
+  samplerDefaults Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chats     ChatThread[]
+  summaries ProjectSummary[]
+  documents ProjectDocument[]
+
+  @@index([userId, updatedAt])
+  @@map("project")
+}
+
+model ProjectSummary {
+  id             String   @id @default(cuid())
+  projectId      String
+  chatId         String
+  summary        String   @db.Text
+  messageCountAt Int
+  updatedAt      DateTime @updatedAt
+
+  project Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  chat    ChatThread @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, chatId])
+  @@map("project_summary")
+}
+
+model ProjectDocument {
+  id           String              @id @default(cuid())
+  projectId    String
+  name         String
+  sourceType   DocumentSourceType
+  sourceRef    String              @db.Text
+  mimeType     String?
+  sizeBytes    Int?
+  syncStatus   ConnectorSyncStatus
+  lastSyncedAt DateTime?
+  createdAt    DateTime            @default(now())
+
+  project Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  chunks  DocumentChunk[]
+
+  @@index([projectId, syncStatus])
+  @@map("project_document")
+}
+
+model DocumentChunk {
+  id         String                       @id @default(cuid())
+  documentId String
+  chunkIndex Int
+  content    String                       @db.Text
+  embedding  Unsupported("vector(1536)")?
+  tokenCount Int?
+  metadata   Json?
+
+  document ProjectDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@map("document_chunk")
+}
+
+model ProviderConfig {
+  id              String   @id @default(cuid())
+  providerId      String
+  displayName     String
+  baseUrl         String
+  apiKeyEncrypted String   @db.Text
+  enabled         Boolean  @default(true)
+  updatedAt       DateTime @updatedAt
+
+  modelPolicies ModelPolicy[]
+
+  @@unique([providerId])
+  @@map("provider_config")
+}
+
+model ModelPolicy {
+  id          String  @id @default(cuid())
+  providerId  String
+  modelId     String
+  displayName String?
+  allowed     Boolean @default(true)
+  isDefault   Boolean @default(false)
+
+  provider ProviderConfig @relation(fields: [providerId], references: [providerId], onDelete: Cascade)
+
+  @@unique([providerId, modelId])
+  @@map("model_policy")
+}
+
+model UserSettings {
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  theme               String?
+  defaultSystemPrompt String?  @db.Text
+  defaultModelId      String?
+  preferences         Json?
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+model BackgroundJob {
+  id          String    @id @default(cuid())
+  type        String
+  payload     Json
+  status      JobStatus
+  error       String?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@map("background_job")
 }

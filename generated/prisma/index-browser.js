@@ -121,20 +121,13 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
-exports.Prisma.PostScalarFieldEnum = {
-  id: 'id',
-  name: 'name',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt',
-  createdById: 'createdById'
-};
-
 exports.Prisma.UserScalarFieldEnum = {
   id: 'id',
   name: 'name',
   email: 'email',
   emailVerified: 'emailVerified',
   image: 'image',
+  role: 'role',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -175,9 +168,149 @@ exports.Prisma.VerificationScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.AllowedEmailScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  note: 'note',
+  createdAt: 'createdAt',
+  createdById: 'createdById'
+};
+
+exports.Prisma.ChatThreadScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  projectId: 'projectId',
+  parentChatId: 'parentChatId',
+  forkedFromMessageId: 'forkedFromMessageId',
+  depth: 'depth',
+  path: 'path',
+  title: 'title',
+  hiddenAt: 'hiddenAt',
+  sortOrder: 'sortOrder',
+  systemPrompt: 'systemPrompt',
+  samplerSettings: 'samplerSettings',
+  enabledTools: 'enabledTools',
+  activeModelId: 'activeModelId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.MessageScalarFieldEnum = {
+  id: 'id',
+  chatId: 'chatId',
+  role: 'role',
+  content: 'content',
+  parentMessageId: 'parentMessageId',
+  ordinal: 'ordinal',
+  variantGroupId: 'variantGroupId',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.MessageVariantScalarFieldEnum = {
+  id: 'id',
+  messageId: 'messageId',
+  variantGroupId: 'variantGroupId',
+  variantIndex: 'variantIndex',
+  content: 'content',
+  isActive: 'isActive',
+  status: 'status',
+  errorMessage: 'errorMessage',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.ProjectScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  name: 'name',
+  description: 'description',
+  systemPrompt: 'systemPrompt',
+  samplerDefaults: 'samplerDefaults',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ProjectSummaryScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  chatId: 'chatId',
+  summary: 'summary',
+  messageCountAt: 'messageCountAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ProjectDocumentScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  name: 'name',
+  sourceType: 'sourceType',
+  sourceRef: 'sourceRef',
+  mimeType: 'mimeType',
+  sizeBytes: 'sizeBytes',
+  syncStatus: 'syncStatus',
+  lastSyncedAt: 'lastSyncedAt',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.DocumentChunkScalarFieldEnum = {
+  id: 'id',
+  documentId: 'documentId',
+  chunkIndex: 'chunkIndex',
+  content: 'content',
+  tokenCount: 'tokenCount',
+  metadata: 'metadata'
+};
+
+exports.Prisma.ProviderConfigScalarFieldEnum = {
+  id: 'id',
+  providerId: 'providerId',
+  displayName: 'displayName',
+  baseUrl: 'baseUrl',
+  apiKeyEncrypted: 'apiKeyEncrypted',
+  enabled: 'enabled',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ModelPolicyScalarFieldEnum = {
+  id: 'id',
+  providerId: 'providerId',
+  modelId: 'modelId',
+  displayName: 'displayName',
+  allowed: 'allowed',
+  isDefault: 'isDefault'
+};
+
+exports.Prisma.UserSettingsScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  theme: 'theme',
+  defaultSystemPrompt: 'defaultSystemPrompt',
+  defaultModelId: 'defaultModelId',
+  preferences: 'preferences',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.BackgroundJobScalarFieldEnum = {
+  id: 'id',
+  type: 'type',
+  payload: 'payload',
+  status: 'status',
+  error: 'error',
+  createdAt: 'createdAt',
+  completedAt: 'completedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
+};
+
+exports.Prisma.NullableJsonNullValueInput = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull
+};
+
+exports.Prisma.JsonNullValueInput = {
+  JsonNull: Prisma.JsonNull
 };
 
 exports.Prisma.QueryMode = {
@@ -190,13 +323,60 @@ exports.Prisma.NullsOrder = {
   last: 'last'
 };
 
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
+};
+exports.UserRole = exports.$Enums.UserRole = {
+  user: 'user',
+  admin: 'admin'
+};
+
+exports.MessageRole = exports.$Enums.MessageRole = {
+  user: 'user',
+  assistant: 'assistant',
+  system: 'system',
+  tool: 'tool'
+};
+
+exports.DocumentSourceType = exports.$Enums.DocumentSourceType = {
+  upload: 'upload',
+  local_path: 'local_path',
+  github: 'github'
+};
+
+exports.ConnectorSyncStatus = exports.$Enums.ConnectorSyncStatus = {
+  pending: 'pending',
+  syncing: 'syncing',
+  ready: 'ready',
+  failed: 'failed'
+};
+
+exports.JobStatus = exports.$Enums.JobStatus = {
+  pending: 'pending',
+  running: 'running',
+  completed: 'completed',
+  failed: 'failed'
+};
 
 exports.Prisma.ModelName = {
-  Post: 'Post',
   User: 'User',
   Session: 'Session',
   Account: 'Account',
-  Verification: 'Verification'
+  Verification: 'Verification',
+  AllowedEmail: 'AllowedEmail',
+  ChatThread: 'ChatThread',
+  Message: 'Message',
+  MessageVariant: 'MessageVariant',
+  Project: 'Project',
+  ProjectSummary: 'ProjectSummary',
+  ProjectDocument: 'ProjectDocument',
+  DocumentChunk: 'DocumentChunk',
+  ProviderConfig: 'ProviderConfig',
+  ModelPolicy: 'ModelPolicy',
+  UserSettings: 'UserSettings',
+  BackgroundJob: 'BackgroundJob'
 };
 
 /**

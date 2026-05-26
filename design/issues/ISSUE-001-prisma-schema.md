@@ -1,7 +1,7 @@
 ---
 id: ISSUE-001
 title: Prisma schema for chat domain
-status: pending
+status: done
 type: coding
 layer: BE
 phase: 0

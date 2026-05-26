@@ -93,20 +93,13 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
-exports.Prisma.PostScalarFieldEnum = {
-  id: 'id',
-  name: 'name',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt',
-  createdById: 'createdById'
-};
-
 exports.Prisma.UserScalarFieldEnum = {
   id: 'id',
   name: 'name',
   email: 'email',
   emailVerified: 'emailVerified',
   image: 'image',
+  role: 'role',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -147,9 +140,149 @@ exports.Prisma.VerificationScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.AllowedEmailScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  note: 'note',
+  createdAt: 'createdAt',
+  createdById: 'createdById'
+};
+
+exports.Prisma.ChatThreadScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  projectId: 'projectId',
+  parentChatId: 'parentChatId',
+  forkedFromMessageId: 'forkedFromMessageId',
+  depth: 'depth',
+  path: 'path',
+  title: 'title',
+  hiddenAt: 'hiddenAt',
+  sortOrder: 'sortOrder',
+  systemPrompt: 'systemPrompt',
+  samplerSettings: 'samplerSettings',
+  enabledTools: 'enabledTools',
+  activeModelId: 'activeModelId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.MessageScalarFieldEnum = {
+  id: 'id',
+  chatId: 'chatId',
+  role: 'role',
+  content: 'content',
+  parentMessageId: 'parentMessageId',
+  ordinal: 'ordinal',
+  variantGroupId: 'variantGroupId',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.MessageVariantScalarFieldEnum = {
+  id: 'id',
+  messageId: 'messageId',
+  variantGroupId: 'variantGroupId',
+  variantIndex: 'variantIndex',
+  content: 'content',
+  isActive: 'isActive',
+  status: 'status',
+  errorMessage: 'errorMessage',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.ProjectScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  name: 'name',
+  description: 'description',
+  systemPrompt: 'systemPrompt',
+  samplerDefaults: 'samplerDefaults',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ProjectSummaryScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  chatId: 'chatId',
+  summary: 'summary',
+  messageCountAt: 'messageCountAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ProjectDocumentScalarFieldEnum = {
+  id: 'id',
+  projectId: 'projectId',
+  name: 'name',
+  sourceType: 'sourceType',
+  sourceRef: 'sourceRef',
+  mimeType: 'mimeType',
+  sizeBytes: 'sizeBytes',
+  syncStatus: 'syncStatus',
+  lastSyncedAt: 'lastSyncedAt',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.DocumentChunkScalarFieldEnum = {
+  id: 'id',
+  documentId: 'documentId',
+  chunkIndex: 'chunkIndex',
+  content: 'content',
+  tokenCount: 'tokenCount',
+  metadata: 'metadata'
+};
+
+exports.Prisma.ProviderConfigScalarFieldEnum = {
+  id: 'id',
+  providerId: 'providerId',
+  displayName: 'displayName',
+  baseUrl: 'baseUrl',
+  apiKeyEncrypted: 'apiKeyEncrypted',
+  enabled: 'enabled',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ModelPolicyScalarFieldEnum = {
+  id: 'id',
+  providerId: 'providerId',
+  modelId: 'modelId',
+  displayName: 'displayName',
+  allowed: 'allowed',
+  isDefault: 'isDefault'
+};
+
+exports.Prisma.UserSettingsScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  theme: 'theme',
+  defaultSystemPrompt: 'defaultSystemPrompt',
+  defaultModelId: 'defaultModelId',
+  preferences: 'preferences',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.BackgroundJobScalarFieldEnum = {
+  id: 'id',
+  type: 'type',
+  payload: 'payload',
+  status: 'status',
+  error: 'error',
+  createdAt: 'createdAt',
+  completedAt: 'completedAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
+};
+
+exports.Prisma.NullableJsonNullValueInput = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull
+};
+
+exports.Prisma.JsonNullValueInput = {
+  JsonNull: Prisma.JsonNull
 };
 
 exports.Prisma.QueryMode = {
@@ -162,13 +295,60 @@ exports.Prisma.NullsOrder = {
   last: 'last'
 };
 
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
+};
+exports.UserRole = exports.$Enums.UserRole = {
+  user: 'user',
+  admin: 'admin'
+};
+
+exports.MessageRole = exports.$Enums.MessageRole = {
+  user: 'user',
+  assistant: 'assistant',
+  system: 'system',
+  tool: 'tool'
+};
+
+exports.DocumentSourceType = exports.$Enums.DocumentSourceType = {
+  upload: 'upload',
+  local_path: 'local_path',
+  github: 'github'
+};
+
+exports.ConnectorSyncStatus = exports.$Enums.ConnectorSyncStatus = {
+  pending: 'pending',
+  syncing: 'syncing',
+  ready: 'ready',
+  failed: 'failed'
+};
+
+exports.JobStatus = exports.$Enums.JobStatus = {
+  pending: 'pending',
+  running: 'running',
+  completed: 'completed',
+  failed: 'failed'
+};
 
 exports.Prisma.ModelName = {
-  Post: 'Post',
   User: 'User',
   Session: 'Session',
   Account: 'Account',
-  Verification: 'Verification'
+  Verification: 'Verification',
+  AllowedEmail: 'AllowedEmail',
+  ChatThread: 'ChatThread',
+  Message: 'Message',
+  MessageVariant: 'MessageVariant',
+  Project: 'Project',
+  ProjectSummary: 'ProjectSummary',
+  ProjectDocument: 'ProjectDocument',
+  DocumentChunk: 'DocumentChunk',
+  ProviderConfig: 'ProviderConfig',
+  ModelPolicy: 'ModelPolicy',
+  UserSettings: 'UserSettings',
+  BackgroundJob: 'BackgroundJob'
 };
 /**
  * Create the Client
@@ -181,7 +361,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/home/heatforge/Coding/chatterbox/generated/prisma",
+      "value": "/home/heatforge/.cursor/worktrees/phase0-72504d94/chatterbox-da9ea8f825ce/generated/prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -194,13 +374,14 @@ const config = {
         "native": true
       }
     ],
-    "previewFeatures": [],
-    "sourceFilePath": "/home/heatforge/Coding/chatterbox/prisma/schema.prisma",
+    "previewFeatures": [
+      "postgresqlExtensions"
+    ],
+    "sourceFilePath": "/home/heatforge/.cursor/worktrees/phase0-72504d94/chatterbox-da9ea8f825ce/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": null,
-    "schemaEnvPath": "../../.env"
+    "rootEnvPath": null
   },
   "relativePath": "../../prisma",
   "clientVersion": "6.19.3",
@@ -209,6 +390,7 @@ const config = {
     "db"
   ],
   "activeProvider": "postgresql",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
@@ -217,13 +399,13 @@ const config = {
       }
     }
   },
-  "inlineSchema": "// Prisma schema for Better Auth\n// learn more: https://better-auth.com/docs/concepts/database\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../generated/prisma\"\n}\n\n// NOTE: When using mysql or sqlserver, uncomment the //@db.Text annotations in model Account below\n// Further reading:\n// https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nmodel Post {\n  id        String   @id @default(cuid())\n  name      String\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  createdBy   User   @relation(fields: [createdById], references: [id])\n  createdById String\n\n  @@index([name])\n}\n\nmodel User {\n  id            String    @id\n  name          String //@db.Text\n  email         String\n  emailVerified Boolean   @default(false)\n  image         String? //@db.Text\n  createdAt     DateTime  @default(now())\n  updatedAt     DateTime  @default(now()) @updatedAt\n  sessions      Session[]\n  accounts      Account[]\n  posts         Post[]\n\n  @@unique([email])\n  @@map(\"user\")\n}\n\nmodel Session {\n  id        String   @id\n  expiresAt DateTime\n  token     String\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n  ipAddress String? //@db.Text\n  userAgent String? //@db.Text\n  userId    String\n  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@unique([token])\n  @@map(\"session\")\n}\n\nmodel Account {\n  id                    String    @id\n  accountId             String //@db.Text\n  providerId            String //@db.Text\n  userId                String\n  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)\n  accessToken           String? //@db.Text\n  refreshToken          String? //@db.Text\n  idToken               String? //@db.Text\n  accessTokenExpiresAt  DateTime?\n  refreshTokenExpiresAt DateTime?\n  scope                 String? //@db.Text\n  password              String? //@db.Text\n  createdAt             DateTime  @default(now())\n  updatedAt             DateTime  @updatedAt\n\n  @@map(\"account\")\n}\n\nmodel Verification {\n  id         String   @id\n  identifier String //@db.Text\n  value      String //@db.Text\n  expiresAt  DateTime\n  createdAt  DateTime @default(now())\n  updatedAt  DateTime @default(now()) @updatedAt\n\n  @@map(\"verification\")\n}\n",
-  "inlineSchemaHash": "13b811a21e98325911952479534b19039c5183588e791c7b9235c4279bb03147",
+  "inlineSchema": "// Prisma schema for Better Auth + Chatterbox domain\n// learn more: https://better-auth.com/docs/concepts/database\n\ngenerator client {\n  provider        = \"prisma-client-js\"\n  output          = \"../generated/prisma\"\n  previewFeatures = [\"postgresqlExtensions\"]\n}\n\ndatasource db {\n  provider   = \"postgresql\"\n  url        = env(\"DATABASE_URL\")\n  extensions = [pgvector(map: \"vector\", schema: \"public\")]\n}\n\nenum UserRole {\n  user\n  admin\n}\n\nenum MessageRole {\n  user\n  assistant\n  system\n  tool\n}\n\nenum DocumentSourceType {\n  upload\n  local_path\n  github\n}\n\nenum ConnectorSyncStatus {\n  pending\n  syncing\n  ready\n  failed\n}\n\nenum JobStatus {\n  pending\n  running\n  completed\n  failed\n}\n\nmodel User {\n  id            String   @id\n  name          String\n  email         String\n  emailVerified Boolean  @default(false)\n  image         String?\n  role          UserRole @default(user)\n  createdAt     DateTime @default(now())\n  updatedAt     DateTime @default(now()) @updatedAt\n\n  sessions             Session[]\n  accounts             Account[]\n  chatThreads          ChatThread[]\n  projects             Project[]\n  userSettings         UserSettings?\n  allowedEmailsCreated AllowedEmail[] @relation(\"AllowedEmailCreatedBy\")\n\n  @@unique([email])\n  @@map(\"user\")\n}\n\nmodel Session {\n  id        String   @id\n  expiresAt DateTime\n  token     String\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n  ipAddress String?\n  userAgent String?\n  userId    String\n  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@unique([token])\n  @@map(\"session\")\n}\n\nmodel Account {\n  id                    String    @id\n  accountId             String\n  providerId            String\n  userId                String\n  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)\n  accessToken           String?\n  refreshToken          String?\n  idToken               String?\n  accessTokenExpiresAt  DateTime?\n  refreshTokenExpiresAt DateTime?\n  scope                 String?\n  password              String?\n  createdAt             DateTime  @default(now())\n  updatedAt             DateTime  @updatedAt\n\n  @@map(\"account\")\n}\n\nmodel Verification {\n  id         String   @id\n  identifier String\n  value      String\n  expiresAt  DateTime\n  createdAt  DateTime @default(now())\n  updatedAt  DateTime @default(now()) @updatedAt\n\n  @@map(\"verification\")\n}\n\nmodel AllowedEmail {\n  id          String   @id @default(cuid())\n  email       String\n  note        String?\n  createdAt   DateTime @default(now())\n  createdById String?\n  createdBy   User?    @relation(\"AllowedEmailCreatedBy\", fields: [createdById], references: [id], onDelete: SetNull)\n\n  @@unique([email])\n  @@map(\"allowed_email\")\n}\n\nmodel ChatThread {\n  id                  String    @id @default(cuid())\n  userId              String\n  projectId           String?\n  parentChatId        String?\n  forkedFromMessageId String?\n  depth               Int       @default(0)\n  path                String\n  title               String\n  hiddenAt            DateTime?\n  sortOrder           Int       @default(0)\n  systemPrompt        String?   @db.Text\n  samplerSettings     Json?\n  enabledTools        Json?\n  activeModelId       String?\n  createdAt           DateTime  @default(now())\n  updatedAt           DateTime  @updatedAt\n\n  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)\n  project   Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)\n  parent    ChatThread?      @relation(\"ChatThreadFork\", fields: [parentChatId], references: [id], onDelete: SetNull)\n  children  ChatThread[]     @relation(\"ChatThreadFork\")\n  messages  Message[]\n  summaries ProjectSummary[]\n\n  @@index([userId, hiddenAt, updatedAt])\n  @@index([userId, projectId])\n  @@index([parentChatId])\n  @@index([path])\n  @@map(\"chat_thread\")\n}\n\nmodel Message {\n  id              String      @id @default(cuid())\n  chatId          String\n  role            MessageRole\n  content         Json\n  parentMessageId String?\n  ordinal         Int\n  variantGroupId  String?\n  createdAt       DateTime    @default(now())\n\n  chat     ChatThread       @relation(fields: [chatId], references: [id], onDelete: Cascade)\n  parent   Message?         @relation(\"MessageChain\", fields: [parentMessageId], references: [id], onDelete: SetNull)\n  children Message[]        @relation(\"MessageChain\")\n  variants MessageVariant[]\n\n  @@unique([chatId, ordinal])\n  @@index([chatId, createdAt])\n  @@index([variantGroupId])\n  @@map(\"message\")\n}\n\nmodel MessageVariant {\n  id             String   @id @default(cuid())\n  messageId      String\n  variantGroupId String\n  variantIndex   Int\n  content        Json\n  isActive       Boolean  @default(false)\n  status         String\n  errorMessage   String?\n  createdAt      DateTime @default(now())\n\n  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)\n\n  @@unique([variantGroupId, variantIndex])\n  @@index([messageId])\n  @@map(\"message_variant\")\n}\n\nmodel Project {\n  id              String   @id @default(cuid())\n  userId          String\n  name            String\n  description     String?  @db.Text\n  systemPrompt    String?  @db.Text\n  samplerDefaults Json?\n  createdAt       DateTime @default(now())\n  updatedAt       DateTime @updatedAt\n\n  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)\n  chats     ChatThread[]\n  summaries ProjectSummary[]\n  documents ProjectDocument[]\n\n  @@index([userId, updatedAt])\n  @@map(\"project\")\n}\n\nmodel ProjectSummary {\n  id             String   @id @default(cuid())\n  projectId      String\n  chatId         String\n  summary        String   @db.Text\n  messageCountAt Int\n  updatedAt      DateTime @updatedAt\n\n  project Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)\n  chat    ChatThread @relation(fields: [chatId], references: [id], onDelete: Cascade)\n\n  @@unique([projectId, chatId])\n  @@map(\"project_summary\")\n}\n\nmodel ProjectDocument {\n  id           String              @id @default(cuid())\n  projectId    String\n  name         String\n  sourceType   DocumentSourceType\n  sourceRef    String              @db.Text\n  mimeType     String?\n  sizeBytes    Int?\n  syncStatus   ConnectorSyncStatus\n  lastSyncedAt DateTime?\n  createdAt    DateTime            @default(now())\n\n  project Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)\n  chunks  DocumentChunk[]\n\n  @@index([projectId, syncStatus])\n  @@map(\"project_document\")\n}\n\nmodel DocumentChunk {\n  id         String                       @id @default(cuid())\n  documentId String\n  chunkIndex Int\n  content    String                       @db.Text\n  embedding  Unsupported(\"vector(1536)\")?\n  tokenCount Int?\n  metadata   Json?\n\n  document ProjectDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)\n\n  @@unique([documentId, chunkIndex])\n  @@map(\"document_chunk\")\n}\n\nmodel ProviderConfig {\n  id              String   @id @default(cuid())\n  providerId      String\n  displayName     String\n  baseUrl         String\n  apiKeyEncrypted String   @db.Text\n  enabled         Boolean  @default(true)\n  updatedAt       DateTime @updatedAt\n\n  modelPolicies ModelPolicy[]\n\n  @@unique([providerId])\n  @@map(\"provider_config\")\n}\n\nmodel ModelPolicy {\n  id          String  @id @default(cuid())\n  providerId  String\n  modelId     String\n  displayName String?\n  allowed     Boolean @default(true)\n  isDefault   Boolean @default(false)\n\n  provider ProviderConfig @relation(fields: [providerId], references: [providerId], onDelete: Cascade)\n\n  @@unique([providerId, modelId])\n  @@map(\"model_policy\")\n}\n\nmodel UserSettings {\n  id                  String   @id @default(cuid())\n  userId              String   @unique\n  theme               String?\n  defaultSystemPrompt String?  @db.Text\n  defaultModelId      String?\n  preferences         Json?\n  updatedAt           DateTime @updatedAt\n\n  user User @relation(fields: [userId], references: [id], onDelete: Cascade)\n\n  @@map(\"user_settings\")\n}\n\nmodel BackgroundJob {\n  id          String    @id @default(cuid())\n  type        String\n  payload     Json\n  status      JobStatus\n  error       String?\n  createdAt   DateTime  @default(now())\n  completedAt DateTime?\n\n  @@map(\"background_job\")\n}\n",
+  "inlineSchemaHash": "ef78a54b5c16865cb0174e3fd63f6a185118a936d7b295ff92dbde0b490e33ee",
   "copyEngine": true
 }
 config.dirname = '/'
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"Post\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdBy\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"PostToUser\"},{\"name\":\"createdById\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":null},\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"emailVerified\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"image\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"sessions\",\"kind\":\"object\",\"type\":\"Session\",\"relationName\":\"SessionToUser\"},{\"name\":\"accounts\",\"kind\":\"object\",\"type\":\"Account\",\"relationName\":\"AccountToUser\"},{\"name\":\"posts\",\"kind\":\"object\",\"type\":\"Post\",\"relationName\":\"PostToUser\"}],\"dbName\":\"user\"},\"Session\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"expiresAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"token\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"ipAddress\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userAgent\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"SessionToUser\"}],\"dbName\":\"session\"},\"Account\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"accountId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"providerId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"AccountToUser\"},{\"name\":\"accessToken\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"refreshToken\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"idToken\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"accessTokenExpiresAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"refreshTokenExpiresAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"scope\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"account\"},\"Verification\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"identifier\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"value\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"expiresAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"verification\"}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"emailVerified\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"image\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"role\",\"kind\":\"enum\",\"type\":\"UserRole\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"sessions\",\"kind\":\"object\",\"type\":\"Session\",\"relationName\":\"SessionToUser\"},{\"name\":\"accounts\",\"kind\":\"object\",\"type\":\"Account\",\"relationName\":\"AccountToUser\"},{\"name\":\"chatThreads\",\"kind\":\"object\",\"type\":\"ChatThread\",\"relationName\":\"ChatThreadToUser\"},{\"name\":\"projects\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ProjectToUser\"},{\"name\":\"userSettings\",\"kind\":\"object\",\"type\":\"UserSettings\",\"relationName\":\"UserToUserSettings\"},{\"name\":\"allowedEmailsCreated\",\"kind\":\"object\",\"type\":\"AllowedEmail\",\"relationName\":\"AllowedEmailCreatedBy\"}],\"dbName\":\"user\"},\"Session\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"expiresAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"token\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"ipAddress\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userAgent\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"SessionToUser\"}],\"dbName\":\"session\"},\"Account\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"accountId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"providerId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"AccountToUser\"},{\"name\":\"accessToken\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"refreshToken\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"idToken\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"accessTokenExpiresAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"refreshTokenExpiresAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"scope\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"account\"},\"Verification\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"identifier\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"value\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"expiresAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"verification\"},\"AllowedEmail\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"note\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdById\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdBy\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"AllowedEmailCreatedBy\"}],\"dbName\":\"allowed_email\"},\"ChatThread\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"projectId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"parentChatId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"forkedFromMessageId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"depth\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"path\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"hiddenAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"sortOrder\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"systemPrompt\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"samplerSettings\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"enabledTools\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"activeModelId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"ChatThreadToUser\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ChatThreadToProject\"},{\"name\":\"parent\",\"kind\":\"object\",\"type\":\"ChatThread\",\"relationName\":\"ChatThreadFork\"},{\"name\":\"children\",\"kind\":\"object\",\"type\":\"ChatThread\",\"relationName\":\"ChatThreadFork\"},{\"name\":\"messages\",\"kind\":\"object\",\"type\":\"Message\",\"relationName\":\"ChatThreadToMessage\"},{\"name\":\"summaries\",\"kind\":\"object\",\"type\":\"ProjectSummary\",\"relationName\":\"ChatThreadToProjectSummary\"}],\"dbName\":\"chat_thread\"},\"Message\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"chatId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"role\",\"kind\":\"enum\",\"type\":\"MessageRole\"},{\"name\":\"content\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"parentMessageId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"ordinal\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"variantGroupId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"chat\",\"kind\":\"object\",\"type\":\"ChatThread\",\"relationName\":\"ChatThreadToMessage\"},{\"name\":\"parent\",\"kind\":\"object\",\"type\":\"Message\",\"relationName\":\"MessageChain\"},{\"name\":\"children\",\"kind\":\"object\",\"type\":\"Message\",\"relationName\":\"MessageChain\"},{\"name\":\"variants\",\"kind\":\"object\",\"type\":\"MessageVariant\",\"relationName\":\"MessageToMessageVariant\"}],\"dbName\":\"message\"},\"MessageVariant\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"messageId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"variantGroupId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"variantIndex\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"content\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"isActive\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"errorMessage\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"message\",\"kind\":\"object\",\"type\":\"Message\",\"relationName\":\"MessageToMessageVariant\"}],\"dbName\":\"message_variant\"},\"Project\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"systemPrompt\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"samplerDefaults\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"ProjectToUser\"},{\"name\":\"chats\",\"kind\":\"object\",\"type\":\"ChatThread\",\"relationName\":\"ChatThreadToProject\"},{\"name\":\"summaries\",\"kind\":\"object\",\"type\":\"ProjectSummary\",\"relationName\":\"ProjectToProjectSummary\"},{\"name\":\"documents\",\"kind\":\"object\",\"type\":\"ProjectDocument\",\"relationName\":\"ProjectToProjectDocument\"}],\"dbName\":\"project\"},\"ProjectSummary\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"projectId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"chatId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"summary\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"messageCountAt\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ProjectToProjectSummary\"},{\"name\":\"chat\",\"kind\":\"object\",\"type\":\"ChatThread\",\"relationName\":\"ChatThreadToProjectSummary\"}],\"dbName\":\"project_summary\"},\"ProjectDocument\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"projectId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"sourceType\",\"kind\":\"enum\",\"type\":\"DocumentSourceType\"},{\"name\":\"sourceRef\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"mimeType\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"sizeBytes\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"syncStatus\",\"kind\":\"enum\",\"type\":\"ConnectorSyncStatus\"},{\"name\":\"lastSyncedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"project\",\"kind\":\"object\",\"type\":\"Project\",\"relationName\":\"ProjectToProjectDocument\"},{\"name\":\"chunks\",\"kind\":\"object\",\"type\":\"DocumentChunk\",\"relationName\":\"DocumentChunkToProjectDocument\"}],\"dbName\":\"project_document\"},\"DocumentChunk\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"documentId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"chunkIndex\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"content\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"tokenCount\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"metadata\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"document\",\"kind\":\"object\",\"type\":\"ProjectDocument\",\"relationName\":\"DocumentChunkToProjectDocument\"}],\"dbName\":\"document_chunk\"},\"ProviderConfig\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"providerId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"displayName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"baseUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"apiKeyEncrypted\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"enabled\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"modelPolicies\",\"kind\":\"object\",\"type\":\"ModelPolicy\",\"relationName\":\"ModelPolicyToProviderConfig\"}],\"dbName\":\"provider_config\"},\"ModelPolicy\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"providerId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"modelId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"displayName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"allowed\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"isDefault\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"provider\",\"kind\":\"object\",\"type\":\"ProviderConfig\",\"relationName\":\"ModelPolicyToProviderConfig\"}],\"dbName\":\"model_policy\"},\"UserSettings\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"theme\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"defaultSystemPrompt\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"defaultModelId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"preferences\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"UserToUserSettings\"}],\"dbName\":\"user_settings\"},\"BackgroundJob\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"payload\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"status\",\"kind\":\"enum\",\"type\":\"JobStatus\"},{\"name\":\"error\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"completedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"background_job\"}},\"enums\":{},\"types\":{}}")
 defineDmmfProperty(exports.Prisma, config.runtimeDataModel)
 config.engineWasm = {
   getRuntime: async () => require('./query_engine_bg.js'),
