@@ -6,6 +6,8 @@
   "scripts": {
     "build": "next build",
     "check": "next lint && tsc --noEmit",
+    "test": "vitest run",
+    "test:crypto": "vitest run src/lib/crypto.test.ts",
     "db:generate": "prisma migrate dev",
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
@@ -46,7 +48,8 @@
     "prettier": "^3.5.3",
     "prisma": "^6.6.0",
     "typescript": "^5.8.2",
-    "typescript-eslint": "^8.27.0"
+    "typescript-eslint": "^8.27.0",
+    "vitest": "^3.2.4"
   },
   "ct3aMetadata": {
     "initVersion": "7.40.0"
