@@ -104,7 +104,7 @@ function EmailPasswordAuth() {
         const result = await authClient.signUp.email({
           email,
           password,
-          name: name.trim() || email.split("@")[0] || "User",
+          name: name.trim() || (email.split("@")[0] ?? "User"),
         });
         if (result.error) {
           setError(result.error.message ?? "Sign up failed");

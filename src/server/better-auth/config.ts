@@ -27,7 +27,8 @@ export const auth = betterAuth({
       if (ctx.path !== "/sign-up/email") {
         return;
       }
-      const email = ctx.body?.email;
+      const body = ctx.body as { email?: unknown } | undefined;
+      const email = body?.email;
       if (typeof email !== "string" || !(await isEmailWhitelisted(email))) {
         throw new APIError("UNPROCESSABLE_ENTITY", {
           message: "This email is not authorized to register.",
