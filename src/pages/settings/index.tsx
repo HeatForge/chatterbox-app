@@ -2,6 +2,7 @@ import Head from "next/head";
 import { useRef } from "react";
 
 import { useOverlay } from "~/components/overlays";
+import { SettingsAppearanceSection } from "~/components/settings/SettingsAppearanceSection";
 
 import styles from "./index.module.css";
 
@@ -16,6 +17,7 @@ export default function SettingsPage() {
       </Head>
       <main className={styles.root}>
         <h1 className={styles.title}>Settings</h1>
+        <SettingsAppearanceSection />
         <section className={styles.section} aria-labelledby="overlay-demo-heading">
           <h2 id="overlay-demo-heading" className={styles.sectionTitle}>
             Overlay demo

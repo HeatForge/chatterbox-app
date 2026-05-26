@@ -7,8 +7,9 @@
   --z-modal: 110;
   --z-toast: 120;
   --z-popover: 130;
+}
 
-  /* Semantic tokens — full light/dark themes in ISSUE-007 */
+[data-theme="light"] {
   --color-bg: #ffffff;
   --color-bg-subtle: #f4f4f5;
   --color-surface: #fafafa;
@@ -16,6 +17,31 @@
   --color-text-muted: #71717a;
   --color-border: #e4e4e7;
   --color-accent: #2563eb;
+  --color-on-accent: #ffffff;
+  --color-success: #16a34a;
+  --color-danger: #dc2626;
+}
+
+[data-theme="dark"] {
+  --color-bg: #09090b;
+  --color-bg-subtle: #18181b;
+  --color-surface: #121214;
+  --color-text: #fafafa;
+  --color-text-muted: #a1a1aa;
+  --color-border: #27272a;
+  --color-accent: #3b82f6;
+  --color-on-accent: #ffffff;
+  --color-success: #22c55e;
+  --color-danger: #ef4444;
+}
+
+/* Default before ThemeSync hydrates */
+html {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 html,

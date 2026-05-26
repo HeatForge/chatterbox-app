@@ -1,7 +1,7 @@
 ---
 id: ISSUE-007
 title: Dark and light theme support
-status: pending
+status: done
 type: coding
 layer: FE
 phase: 0
@@ -25,9 +25,9 @@ Global CSS variable themes with user-selectable light, dark, and system preferen
 
 ## Acceptance criteria
 
-- [ ] Toggle in settings switches theme without reload
-- [ ] System theme follows OS when selected
-- [ ] `/chat`, `/admin`, overlays readable in both themes
+- [x] Toggle in settings switches theme without reload
+- [x] System theme follows OS when selected
+- [x] `/chat`, `/admin`, overlays readable in both themes
 
 ## References
 
