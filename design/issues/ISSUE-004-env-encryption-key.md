@@ -1,7 +1,7 @@
 ---
 id: ISSUE-004
 title: Env validation and encryption key
-status: pending
+status: done
 type: coding
 layer: BE
 phase: 0
