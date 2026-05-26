@@ -27,3 +27,18 @@ You can check out the [create-t3-app GitHub repository](https://github.com/t3-os
 ## How do I deploy this?
 
 Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+
+## Progressive Web App (PWA)
+
+Chatterbox is installable via [Serwist](https://serwist.pages.dev/) (`@serwist/next`). The web manifest lives at `public/manifest.json`; the service worker is built to `public/sw.js` on production builds.
+
+**HTTPS:** Browsers only show the install prompt on secure origins (HTTPS or `http://localhost`).
+
+**Test the install prompt (desktop Chrome/Edge):**
+
+1. `SKIP_ENV_VALIDATION=1 bun run build && bun run start`
+2. Open `http://localhost:3000` (or your deployed HTTPS URL).
+3. Open DevTools → Application → Manifest and confirm no errors.
+4. Use the install icon in the address bar, or Application → Manifest → “Install”.
+
+**Offline fallback:** With the production server running, load a page once, then go offline and navigate to a new document route — you should see the “You’re offline” page at `/~offline`.

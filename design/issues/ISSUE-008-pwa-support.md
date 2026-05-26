@@ -1,7 +1,7 @@
 ---
 id: ISSUE-008
 title: PWA installability
-status: pending
+status: done
 type: coding
 layer: fullstack
 phase: 0
@@ -25,9 +25,9 @@ Make Chatterbox installable as a Progressive Web App on desktop and mobile for p
 
 ## Acceptance criteria
 
-- [ ] Lighthouse PWA checklist passes (installable)
-- [ ] “Install app” available in Chrome/Edge on desktop after production build
-- [ ] Add to Home Screen works on Android/iOS Safari (best-effort)
+- [x] Lighthouse PWA checklist passes (installable)
+- [x] “Install app” available in Chrome/Edge on desktop after production build
+- [x] Add to Home Screen works on Android/iOS Safari (best-effort)
 
 ## References
 

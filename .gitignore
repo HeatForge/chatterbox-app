@@ -44,3 +44,7 @@ yarn-error.log*
 
 # idea files
 .idea
+
+# Serwist (generated at build)
+public/sw*
+public/swe-worker*
