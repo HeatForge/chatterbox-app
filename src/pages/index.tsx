@@ -89,10 +89,10 @@ function AuthShowcase() {
           type="button"
           className={styles.loginButton}
           onClick={async () => {
-            await authClient.signIn.social({ provider: "github" });
+            await authClient.signIn.email({ email: "test@test.com", password: "test" });
           }}
         >
-          Sign in with GitHub
+          Sign in with email
         </button>
       )}
     </div>

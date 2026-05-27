@@ -15,34 +15,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  createdBy   User   @relation(fields: [createdById], references: [id])
-  createdById String
-
-  @@index([name])
-}
-
-model User {
-  id            String    @id
-  name          String //@db.Text
-  email         String
-  emailVerified Boolean   @default(false)
-  image         String? //@db.Text
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  posts         Post[]
-
-  @@unique([email])
-  @@map("user")
-}
-
 model Session {
   id        String   @id
   expiresAt DateTime
@@ -51,28 +23,22 @@ model Session {
   updatedAt DateTime @updatedAt
   ipAddress String? //@db.Text
   userAgent String? //@db.Text
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([token])
   @@map("session")
 }
 
 model Account {
-  id                    String    @id
-  accountId             String //@db.Text
-  providerId            String //@db.Text
-  userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accessToken           String? //@db.Text
-  refreshToken          String? //@db.Text
-  idToken               String? //@db.Text
-  accessTokenExpiresAt  DateTime?
-  refreshTokenExpiresAt DateTime?
-  scope                 String? //@db.Text
-  password              String? //@db.Text
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  accountId     String      @id @unique @default(cuid())
+  role          AccountRole @default(USER)
+  email         String      @unique
+  emailVerified Boolean     @default(false)
+  image         String //@db.Text
+  providerId    String //@db.Text
+  accountAuthId String      @unique
+  accountAuth   AccountAuth @relation(fields: [accountAuthId], references: [accountAuthId], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   @@map("account")
 }
@@ -86,4 +52,32 @@ model Verification {
   updatedAt  DateTime @default(now()) @updatedAt
 
   @@map("verification")
+}
+
+model AccountAuth {
+  accountAuthId         String    @id @default(cuid())
+  accessToken           String? //@db.Text
+  refreshToken          String? //@db.Text
+  idToken               String? //@db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String? //@db.Text
+  password              String? //@db.Text
+  accounts              Account[]
+
+  @@map("account_auth")
+}
+
+enum AccountRole {
+  USER
+  ADMIN
+}
+
+model ChatThread {
+  id        String   @id @default(cuid())
+  title     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("chat_thread")
 }

@@ -12,7 +12,7 @@ depends_on: [ISSUE-001]
 
 ## Summary
 
-Configure Better Auth for **email/password only**. Remove GitHub OAuth from config and env. Gate sign-up with `AllowedEmail`.
+Configure Better Auth for **email/password only**. Remove GitHub OAuth from config and env. Gate sign-up with `AllowedEmail`. Also implement the introduction screen that asks to auth before showing any content. This is a personal app there is no plan to show content to not whitelisted users.
 
 ## Requirements
 
@@ -26,6 +26,9 @@ Configure Better Auth for **email/password only**. Remove GitHub OAuth from conf
 - [ ] Whitelisted email can register and sign in
 - [ ] Non-whitelisted email rejected on sign-up
 - [ ] No GitHub OAuth routes or env vars required
+- [ ] Auth prompt landing page
+- [ ] Working whitelist auth
+- [ ] Non-whitelisted page
 
 ## References
 

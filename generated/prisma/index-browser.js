@@ -121,24 +121,6 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
-exports.Prisma.PostScalarFieldEnum = {
-  id: 'id',
-  name: 'name',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt',
-  createdById: 'createdById'
-};
-
-exports.Prisma.UserScalarFieldEnum = {
-  id: 'id',
-  name: 'name',
-  email: 'email',
-  emailVerified: 'emailVerified',
-  image: 'image',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-};
-
 exports.Prisma.SessionScalarFieldEnum = {
   id: 'id',
   expiresAt: 'expiresAt',
@@ -146,22 +128,17 @@ exports.Prisma.SessionScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   ipAddress: 'ipAddress',
-  userAgent: 'userAgent',
-  userId: 'userId'
+  userAgent: 'userAgent'
 };
 
 exports.Prisma.AccountScalarFieldEnum = {
-  id: 'id',
   accountId: 'accountId',
+  role: 'role',
+  email: 'email',
+  emailVerified: 'emailVerified',
+  image: 'image',
   providerId: 'providerId',
-  userId: 'userId',
-  accessToken: 'accessToken',
-  refreshToken: 'refreshToken',
-  idToken: 'idToken',
-  accessTokenExpiresAt: 'accessTokenExpiresAt',
-  refreshTokenExpiresAt: 'refreshTokenExpiresAt',
-  scope: 'scope',
-  password: 'password',
+  accountAuthId: 'accountAuthId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -171,6 +148,24 @@ exports.Prisma.VerificationScalarFieldEnum = {
   identifier: 'identifier',
   value: 'value',
   expiresAt: 'expiresAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.AccountAuthScalarFieldEnum = {
+  accountAuthId: 'accountAuthId',
+  accessToken: 'accessToken',
+  refreshToken: 'refreshToken',
+  idToken: 'idToken',
+  accessTokenExpiresAt: 'accessTokenExpiresAt',
+  refreshTokenExpiresAt: 'refreshTokenExpiresAt',
+  scope: 'scope',
+  password: 'password'
+};
+
+exports.Prisma.ChatThreadScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -189,14 +184,17 @@ exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
 };
-
+exports.AccountRole = exports.$Enums.AccountRole = {
+  USER: 'USER',
+  ADMIN: 'ADMIN'
+};
 
 exports.Prisma.ModelName = {
-  Post: 'Post',
-  User: 'User',
   Session: 'Session',
   Account: 'Account',
-  Verification: 'Verification'
+  Verification: 'Verification',
+  AccountAuth: 'AccountAuth',
+  ChatThread: 'ChatThread'
 };
 
 /**
