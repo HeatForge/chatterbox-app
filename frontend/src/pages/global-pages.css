@@ -41,3 +41,46 @@
   margin-bottom: clamp(1.5rem, 5vw, 3rem);
   text-align: center;
 }
+
+.page-chat__content,
+.page-unauthorized__content {
+  max-width: 42rem;
+}
+
+.page-chat__title,
+.page-unauthorized__title {
+  margin-bottom: clamp(1rem, 3vw, 1.5rem);
+  text-align: center;
+}
+
+.page-chat__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-fluid);
+  width: 100%;
+  max-width: var(--control-width);
+  margin-bottom: clamp(1.25rem, 4vw, 2rem);
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid rgba(255, 242, 214, 0.12);
+  border-radius: 0.75rem;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.page-chat__greeting {
+  font-weight: 600;
+}
+
+.page-unauthorized__message {
+  margin-bottom: clamp(1.25rem, 4vw, 2rem);
+  text-align: center;
+  max-width: var(--control-width);
+}
+
+.page-unauthorized__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-fluid);
+  width: 100%;
+  max-width: var(--control-width);
+}

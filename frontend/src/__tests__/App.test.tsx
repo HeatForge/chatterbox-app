@@ -1,11 +1,34 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import App from "../App";
+import { MemoryRouter } from "react-router-dom";
+import { describe, expect, it, vi } from "vitest";
+import { ApiError } from "../api/client";
+import { AuthProvider } from "../auth/AuthContext";
+import AppRoutes from "../AppRoutes";
+
+vi.mock("../api/auth", () => ({
+  authApi: {
+    me: vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError(401, "unauthorized", "Authentication is required."),
+      ),
+    login: vi.fn(),
+    signup: vi.fn(),
+    logout: vi.fn(),
+  },
+}));
 
 describe("App", () => {
-  it("renders the sign-in page", () => {
-    render(<App />);
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+  it("renders the sign-in page", async () => {
+    render(
+      <MemoryRouter initialEntries={["/signin"]}>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
       "Chatterbox",
     );
     expect(screen.getByPlaceholderText("Email...")).toBeDefined();

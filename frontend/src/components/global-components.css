@@ -18,3 +18,18 @@
 .component-sign-in-form .primitive-button--secondary {
   align-self: center;
 }
+
+.component-form-message {
+  width: 100%;
+  max-width: var(--control-width);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.component-form-message--error {
+  color: #ffb4a8;
+}
+
+.component-form-message--notice {
+  color: #ffe2a8;
+}

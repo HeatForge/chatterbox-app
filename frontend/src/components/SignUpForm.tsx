@@ -1,32 +1,49 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import "./global-components.css";
 import { Button, Text, TextInput } from "./primitive";
 
-export default function SignInForm() {
+interface SignUpLocationState {
+  message?: string;
+}
+
+export default function SignUpForm() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const location = useLocation();
+  const { signup } = useAuth();
+  const initialMessage =
+    (location.state as SignUpLocationState | null)?.message ?? null;
+
   const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(initialMessage);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError(null);
+    setMessage(null);
     setSubmitting(true);
 
     try {
-      await login({ email, password });
+      await signup({ email, displayName, password });
       navigate("/chat", { replace: true });
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("Unable to sign in. Please try again.");
+        if (err.code === "account_exists") {
+          setMessage(err.message);
+          return;
+        }
+        if (err.code === "not_whitelisted") {
+          setMessage(err.message);
+          return;
+        }
+        setMessage(err.message);
+        return;
       }
+      setMessage("Unable to sign up. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -34,9 +51,9 @@ export default function SignInForm() {
 
   return (
     <form className="component-sign-in-form" onSubmit={handleSubmit}>
-      {error ? (
-        <Text className="component-form-message component-form-message--error">
-          {error}
+      {message ? (
+        <Text className="component-form-message component-form-message--notice">
+          {message}
         </Text>
       ) : null}
       <TextInput
@@ -48,23 +65,34 @@ export default function SignInForm() {
         required
       />
       <TextInput
+        variant="default"
+        name="displayName"
+        placeholder="Display name..."
+        icon="user-3-line"
+        autoComplete="name"
+        value={displayName}
+        onChange={(event) => setDisplayName(event.target.value)}
+        required
+      />
+      <TextInput
         variant="password"
         name="password"
-        autoComplete="current-password"
+        autoComplete="new-password"
         value={password}
         onChange={(event) => setPassword(event.target.value)}
+        minLength={8}
         required
       />
       <Button variant="primary" type="submit" disabled={submitting}>
-        Sign In
+        Sign Up
       </Button>
       <Button
         variant="secondary"
         narrow
         type="button"
-        onClick={() => navigate("/signup")}
+        onClick={() => navigate("/signin")}
       >
-        Sign Up
+        Sign In
       </Button>
     </form>
   );

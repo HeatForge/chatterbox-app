@@ -35,40 +35,53 @@ Persistent project memory for AI agents working in this repository. Keep this fi
 | Package | Contents |
 |---------|----------|
 | `Application.java` | Spring Boot entry point |
-| `config/` | Cross-cutting config (currently CORS in `WebConfig`) |
-| `controller/` | REST controllers (currently `HealthController` only) |
+| `config/` | Cross-cutting config (`WebConfig`, `SecurityConfig`) |
+| `controller/` | REST controllers (`HealthController`, `AuthController`) |
+| `entity/` | JPA entities (`User`, `EmailWhitelist`) |
+| `repository/` | Spring Data repositories |
+| `service/` | Business logic (`AuthService`) |
+| `dto/` | Request/response records |
+| `security/` | `AppUserDetailsService` |
+| `exception/` | Auth exceptions and `GlobalExceptionHandler` |
 
-Packages not yet present: `entity/`, `repository/`, `service/`, `dto/`.
+Packages not yet present: OpenAPI-specific DTO layering beyond records.
 
 ### Frontend source (`frontend/src/`)
 
 | Path | Purpose |
 |------|---------|
 | `main.tsx` | React entry (`StrictMode`) |
-| `App.tsx` | Main (and only) page component |
-| `App.css` | Global styles (dark slate theme) |
-| `api/client.ts` | Fetch-based HTTP client |
+| `App.tsx` | Router shell with `AuthProvider` |
+| `AppRoutes.tsx` | React Router route table |
+| `auth/` | `AuthContext`, `ProtectedRoute` |
+| `pages/` | `SignInPage`, `SignUpPage`, `ChatPage`, `UnauthorizedPage` |
+| `components/` | `SignInForm`, `SignUpForm`, primitives |
+| `api/client.ts` | Fetch-based HTTP client (`credentials: "include"`) |
+| `api/auth.ts` | Auth API helpers |
 | `__tests__/` | Vitest + Testing Library tests |
 
 ## Tech stack
 
 | Layer | Stack |
 |-------|-------|
-| Frontend | React 19, Vite 6, TypeScript 5.7 (strict), Vitest |
-| Backend | Spring Boot 3.4.1, Java 21, Spring Web, Spring Data JPA |
+| Frontend | React 19, Vite 6, TypeScript 5.7 (strict), Vitest, React Router |
+| Backend | Spring Boot 3.4.1, Java 21, Spring Web, Spring Data JPA, Spring Security |
 | Database | PostgreSQL; Flyway migrations; Hibernate `ddl-auto: validate` |
 | Production | GraalVM native image via `native-maven-plugin` |
 | Tooling | Bash scripts, Maven, npm |
 
-**Not in use yet:** React Router, global state libraries, auth, validation, OpenAPI, Lombok, Docker Compose, CI/CD.
+**Not in use yet:** global state libraries beyond auth context, OpenAPI, Lombok, Docker Compose, CI/CD.
 
 ## Current features
 
 | Feature | Location | Notes |
 |---------|----------|-------|
 | Health check API | `GET /api/health` in `HealthController` | Returns `{ status, db }`; DB field is product name + version or error |
-| Status dashboard | `frontend/src/App.tsx` | Shows frontend port and backend/DB health |
-| Users table (schema only) | `V1__init.sql` | No JPA entity, repository, or API yet |
+| Session auth API | `AuthController` | `POST /api/auth/signup`, `login`, `logout`; `GET /api/auth/me` |
+| Email whitelist signup | `V2__auth.sql`, `AuthService` | Signup rejected with `403 not_whitelisted` unless email is in `email_whitelist` |
+| Sign-in / sign-up UI | `SignInPage`, `SignUpPage` | Wired to backend; duplicate email shows message on signup form |
+| Gated chat page | `ChatPage` + `ProtectedRoute` | `/chat` redirects to `/unauthorized` when not signed in |
+| Users table | `V1__init.sql`, `User` entity | Stores `password_hash` (BCrypt) via `V2__auth.sql` |
 | Template cloning | `scripts/clone-template` | See known issues below |
 
 ## Scripts
@@ -131,8 +144,9 @@ All scripts use `#!/usr/bin/env bash`, `set -euo pipefail`, and resolve `PROJECT
 
 - ES modules; default exports for components
 - Interfaces colocated with components until shared types emerge
-- API calls go through `frontend/src/api/client.ts` (`api.get`, `post`, `put`, `delete`)
-- Tests in `src/__tests__/`; mock `api/client` rather than `fetch` directly
+- API calls go through `frontend/src/api/client.ts` (`api.get`, `post`, `put`, `delete`); auth helpers in `api/auth.ts`
+- Use `credentials: "include"` for session cookies (already set in `client.ts`)
+- Tests in `src/__tests__/`; mock `api/auth` or `api/client` rather than `fetch` directly
 - Styling via plain CSS in `App.css` (no Tailwind or CSS-in-JS)
 
 ### Dev networking
@@ -144,13 +158,20 @@ All scripts use `#!/usr/bin/env bash`, `set -euo pipefail`, and resolve `PROJECT
 
 **Source of truth:** Flyway migrations in `backend/src/main/resources/db/migration/`.
 
-Current schema (`V1__init.sql`):
+Current schema (`V1__init.sql` + `V2__auth.sql`):
 
 ```sql
-users (id, email, display_name, created_at, updated_at)
+users (id, email, display_name, password_hash, created_at, updated_at)
+email_whitelist (id, email, created_at)
 ```
 
-`db/schema.sql` documents the intended full schema. It currently includes `idx_users_email` which is **not** in `V1__init.sql` — treat this as drift to resolve when adding the next migration.
+`db/schema.sql` documents the intended full schema and should stay in sync with migrations.
+
+**Whitelist new users (dev):** insert into `email_whitelist` before signup, e.g.
+
+```sql
+INSERT INTO email_whitelist (email) VALUES ('you@example.com');
+```
 
 **Docker container:** `chatterbox-app-postgres` (managed by `scripts/start-db`).
 
@@ -159,9 +180,10 @@ users (id, email, display_name, created_at, updated_at)
 | Aspect | Convention |
 |--------|------------|
 | Base path | `/api` on all controllers |
-| Error handling | No global `@ControllerAdvice` yet |
-| Auth | None |
-| Validation | No `spring-boot-starter-validation` yet |
+| Auth | Session cookie (`JSESSIONID`); CSRF disabled for `/api/**` |
+| Error handling | `GlobalExceptionHandler` returns `{ error, message }` JSON |
+| Auth errors | `account_exists` (409), `not_whitelisted` (403), `invalid_credentials` (401) |
+| Validation | `spring-boot-starter-validation` on auth DTOs |
 
 When adding endpoints, follow `HealthController` structure: controller in `controller/`, inject dependencies via constructor, return typed responses (consider records/DTOs as the API grows).
 
@@ -192,9 +214,9 @@ Update this section when you fix or discover issues.
 | Issue | Detail |
 |-------|--------|
 | `clone-template` token mismatch | Script expects `__TEMPLATE_NAME__` / `__TEMPLATE_PACKAGE__` placeholders; codebase uses hardcoded `chatterbox-app` / `com.chatterboxapp` |
-| Schema drift | `db/schema.sql` has `idx_users_email` not present in `V1__init.sql` |
+| Schema drift | ~~`db/schema.sql` has `idx_users_email` not present in `V1__init.sql`~~ resolved in `V2__auth.sql` |
 | README incomplete | Missing `scripts/start-db`, `VITE_API_URL`, and updated DB setup steps |
-| No users API | Migration creates `users` table but no backend/frontend feature uses it |
+| No users API beyond auth | User CRUD/admin whitelist API not implemented yet |
 | Missing `vite.svg` | `index.html` references `/vite.svg`; no `frontend/public/` directory |
 | Backend tests need live DB | No in-memory test database configured |
 

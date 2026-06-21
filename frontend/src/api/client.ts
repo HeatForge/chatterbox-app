@@ -1,5 +1,36 @@
 const BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+interface ErrorBody {
+  error?: string;
+  message?: string;
+}
+
+async function parseError(res: Response): Promise<ApiError> {
+  let body: ErrorBody = {};
+  try {
+    body = (await res.json()) as ErrorBody;
+  } catch {
+    // Response body is not JSON.
+  }
+
+  return new ApiError(
+    res.status,
+    body.error ?? "unknown",
+    body.message ?? res.statusText,
+  );
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -7,15 +38,20 @@ async function request<T>(
 ): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
+    credentials: "include",
     headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
 
   if (!res.ok) {
-    throw new Error(`${res.status} ${res.statusText}`);
+    throw await parseError(res);
   }
 
-  return res.json();
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
+  return res.json() as Promise<T>;
 }
 
 export const api = {
