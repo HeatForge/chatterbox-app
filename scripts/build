@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+DIST_DIR="$PROJECT_ROOT/dist"
+
+echo "==> Cleaning dist directory..."
+rm -rf "$DIST_DIR"
+mkdir -p "$DIST_DIR/frontend" "$DIST_DIR/backend"
+
+echo "==> Building frontend..."
+(cd "$PROJECT_ROOT/frontend" && npm ci && npm run build)
+cp -r "$PROJECT_ROOT/frontend/dist/"* "$DIST_DIR/frontend/"
+
+echo "==> Building backend native image (this may take a while)..."
+(cd "$PROJECT_ROOT/backend" && mvn -Pnative native:compile -DskipTests)
+NATIVE_BINARY=$(find "$PROJECT_ROOT/backend/target" -maxdepth 1 -type f -executable | head -1)
+
+if [[ -z "$NATIVE_BINARY" ]]; then
+  echo "ERROR: Native binary not found in backend/target/"
+  exit 1
+fi
+
+cp "$NATIVE_BINARY" "$DIST_DIR/backend/app"
+
+cp "$PROJECT_ROOT/.env.example" "$DIST_DIR/.env.example"
+
+echo ""
+echo "==> Build complete!"
+echo "    Frontend: $DIST_DIR/frontend/"
+echo "    Backend:  $DIST_DIR/backend/app"
+echo ""
+echo "    To deploy, copy dist/ to your server and:"
+echo "      1. Set environment variables from .env.example"
+echo "      2. Serve dist/frontend/ with nginx"
+echo "      3. Run dist/backend/app as a systemd service"

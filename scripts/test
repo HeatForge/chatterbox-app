@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+RUN_FRONTEND=true
+RUN_BACKEND=true
+
+usage() {
+  echo "Usage: $0 [-f|--frontend] [-b|--backend]"
+  echo "  -f, --frontend   Run frontend tests only"
+  echo "  -b, --backend    Run backend tests only"
+  echo "  (no flags)       Run both"
+  exit 1
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -f|--frontend) RUN_BACKEND=false; shift ;;
+    -b|--backend)  RUN_FRONTEND=false; shift ;;
+    -h|--help)     usage ;;
+    *)             echo "Unknown option: $1"; usage ;;
+  esac
+done
+
+EXIT_CODE=0
+
+if $RUN_FRONTEND; then
+  echo "==> Running frontend tests..."
+  if (cd "$PROJECT_ROOT/frontend" && npm test); then
+    echo "    Frontend tests: PASSED"
+  else
+    echo "    Frontend tests: FAILED"
+    EXIT_CODE=1
+  fi
+  echo ""
+fi
+
+if $RUN_BACKEND; then
+  echo "==> Running backend tests..."
+  if (cd "$PROJECT_ROOT/backend" && mvn test); then
+    echo "    Backend tests: PASSED"
+  else
+    echo "    Backend tests: FAILED"
+    EXIT_CODE=1
+  fi
+  echo ""
+fi
+
+if [[ $EXIT_CODE -eq 0 ]]; then
+  echo "==> All tests passed."
+else
+  echo "==> Some tests failed."
+fi
+
+exit $EXIT_CODE

@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<EOF
+Usage: $0 --path <target-directory> --name <app-name>
+
+Clones this template into a new project directory.
+
+Arguments:
+  --path   Directory where the new project will be created
+  --name   Name of the new application (lowercase, hyphens allowed)
+
+Example:
+  $0 --path ~/projects --name my-cool-app
+EOF
+  exit 1
+}
+
+TARGET_PATH=""
+APP_NAME=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --path) TARGET_PATH="$2"; shift 2 ;;
+    --name) APP_NAME="$2"; shift 2 ;;
+    -h|--help) usage ;;
+    *) echo "Unknown option: $1"; usage ;;
+  esac
+done
+
+if [[ -z "$TARGET_PATH" || -z "$APP_NAME" ]]; then
+  echo "ERROR: --path and --name are required."
+  echo ""
+  usage
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TEMPLATE_ROOT="$(dirname "$SCRIPT_DIR")"
+TARGET_DIR="$TARGET_PATH/$APP_NAME"
+
+APP_PACKAGE="${APP_NAME//-/}"
+
+if [[ -d "$TARGET_DIR" ]]; then
+  echo "ERROR: Target directory already exists: $TARGET_DIR"
+  exit 1
+fi
+
+echo "Cloning template..."
+echo "  Source: $TEMPLATE_ROOT"
+echo "  Target: $TARGET_DIR"
+echo "  Name:   $APP_NAME"
+echo "  Pkg:    com.$APP_PACKAGE"
+echo ""
+
+echo "Copying files..."
+rsync -a --exclude='node_modules' --exclude='target' --exclude='dist' \
+  --exclude='.git' --exclude='.env' \
+  "$TEMPLATE_ROOT/" "$TARGET_DIR/"
+
+echo "Replacing tokens..."
+find "$TARGET_DIR" -type f \( \
+    -name "*.java" -o -name "*.xml" -o -name "*.yml" -o -name "*.yaml" \
+    -o -name "*.json" -o -name "*.ts" -o -name "*.tsx" -o -name "*.html" \
+    -o -name "*.md" -o -name "*.sql" -o -name "*.css" -o -name "*.sh" \
+  \) -exec sed -i "s/__TEMPLATE_NAME__/$APP_NAME/g" {} \;
+
+find "$TARGET_DIR" -type f \( \
+    -name "*.java" -o -name "*.xml" -o -name "*.yml" -o -name "*.yaml" \
+    -o -name "*.json" -o -name "*.ts" -o -name "*.tsx" -o -name "*.html" \
+    -o -name "*.md" -o -name "*.sql" -o -name "*.css" -o -name "*.sh" \
+  \) -exec sed -i "s/__TEMPLATE_PACKAGE__/$APP_PACKAGE/g" {} \;
+
+echo "Renaming package directories..."
+OLD_PKG_DIR="$TARGET_DIR/backend/src/main/java/com/__TEMPLATE_PACKAGE__"
+NEW_PKG_DIR="$TARGET_DIR/backend/src/main/java/com/$APP_PACKAGE"
+if [[ -d "$OLD_PKG_DIR" ]]; then
+  mv "$OLD_PKG_DIR" "$NEW_PKG_DIR"
+fi
+
+OLD_TEST_PKG_DIR="$TARGET_DIR/backend/src/test/java/com/__TEMPLATE_PACKAGE__"
+NEW_TEST_PKG_DIR="$TARGET_DIR/backend/src/test/java/com/$APP_PACKAGE"
+if [[ -d "$OLD_TEST_PKG_DIR" ]]; then
+  mv "$OLD_TEST_PKG_DIR" "$NEW_TEST_PKG_DIR"
+fi
+
+cp "$TEMPLATE_ROOT/.env.example" "$TARGET_DIR/.env"
+
+echo ""
+echo "Done! New project created at: $TARGET_DIR"
+echo ""
+echo "Next steps:"
+echo "  cd $TARGET_DIR"
+echo "  cd frontend && npm install"
+echo "  Create the PostgreSQL database and user from .env"
+echo "  scripts/start"
