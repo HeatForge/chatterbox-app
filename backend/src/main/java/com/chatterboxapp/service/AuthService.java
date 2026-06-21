@@ -93,6 +93,15 @@ public class AuthService {
         .orElse(null);
   }
 
+  public User requireCurrentUser() {
+    AuthUserResponse current = currentUser();
+    if (current == null) {
+      throw new com.chatterboxapp.exception.ForbiddenException("Authentication is required.");
+    }
+    return userRepository.findById(current.id())
+        .orElseThrow(() -> new com.chatterboxapp.exception.ResourceNotFoundException("User not found."));
+  }
+
   private void authenticate(
       String email,
       String password,

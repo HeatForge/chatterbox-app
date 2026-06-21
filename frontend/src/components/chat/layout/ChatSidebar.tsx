@@ -15,6 +15,8 @@ interface ChatSidebarProps {
   chatThreads: Array<{ id: string; title: string }>;
   selectedThreadId: string | null;
   onSelectThread: (threadId: string) => void;
+  onNewChat: () => void;
+  onNewProject: () => void;
 }
 
 export default function ChatSidebar({
@@ -24,6 +26,8 @@ export default function ChatSidebar({
   chatThreads,
   selectedThreadId,
   onSelectThread,
+  onNewChat,
+  onNewProject,
 }: ChatSidebarProps) {
   return (
     <aside className="chat-sidebar" style={{ width }}>
@@ -44,11 +48,13 @@ export default function ChatSidebar({
           icon="quill-pen-line"
           label="New chat"
           className="chat-sidebar__footer-btn"
+          onClick={onNewChat}
         />
         <IconButton
           icon="new-folder-line"
           label="New project"
           className="chat-sidebar__footer-btn"
+          onClick={onNewProject}
         />
         <div
           className="chat-sidebar__footer-btn chat-sidebar__footer-btn--placeholder"
