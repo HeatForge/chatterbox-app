@@ -42,6 +42,19 @@
   text-align: center;
 }
 
+.page-chat {
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.page-chat::before {
+  display: none;
+}
+
+.page-chat .page__content {
+  display: none;
+}
+
 .page-chat__content,
 .page-unauthorized__content {
   max-width: 42rem;
