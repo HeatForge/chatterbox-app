@@ -1,0 +1,20 @@
+/* Component-level styles that override primitive defaults when composed into features. */
+
+.component-sign-in-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-fluid);
+  width: 100%;
+  max-width: var(--control-width);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .component-sign-in-form {
+    transition: var(--motion-layout);
+  }
+}
+
+.component-sign-in-form .primitive-button--secondary {
+  align-self: center;
+}

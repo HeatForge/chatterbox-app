@@ -5,54 +5,16 @@
 }
 
 body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
+  font-family: var(--font-family, "SN Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  background: var(--color-bg, #222b25);
+  color: var(--color-text, #fff2d6);
   min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  font-optical-sizing: auto;
+  font-style: normal;
 }
 
-.app {
-  text-align: center;
-  max-width: 480px;
-  width: 100%;
-  padding: 2rem;
-}
-
-h1 {
-  font-size: 2rem;
-  margin-bottom: 2rem;
-  color: #f8fafc;
-}
-
-.card {
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 1rem;
-}
-
-.card h2 {
-  font-size: 1rem;
-  color: #94a3b8;
-  margin-bottom: 0.5rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.status {
-  font-size: 0.9rem;
-  font-family: monospace;
-}
-
-.status.ok {
-  color: #4ade80;
-}
-
-.status.error {
-  color: #f87171;
+@media (prefers-reduced-motion: no-preference) {
+  body {
+    transition: var(--motion-layout);
+  }
 }
