@@ -1,0 +1,38 @@
+.chat-message-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0 0.15rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.chat-message--user .chat-message-actions {
+  justify-content: flex-end;
+}
+
+.chat-message__group:hover .chat-message-actions,
+.chat-message-actions:hover {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.chat-message-actions__btn.primitive-icon-button {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.chat-message-actions__variants {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.chat-message-actions__counter {
+  font-size: var(--font-size-heading-small);
+  color: rgba(255, 242, 214, 0.55);
+  min-width: 2.5rem;
+  text-align: center;
+}

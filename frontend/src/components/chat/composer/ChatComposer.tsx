@@ -36,12 +36,13 @@ export default function ChatComposer({ onSend }: ChatComposerProps) {
             }
           }}
         />
+      </div>
+      <div className="chat-composer__grip" aria-hidden>
         <button type="button" className="chat-composer__attach">
           <Icon name="attachment-line" aria-hidden />
           <span>Attach File</span>
         </button>
       </div>
-      <div className="chat-composer__grip" aria-hidden />
     </form>
   );
 }

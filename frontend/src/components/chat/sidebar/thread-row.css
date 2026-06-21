@@ -1,0 +1,100 @@
+.chat-thread-row {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.chat-thread-row__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: clamp(0.5rem, 1.2vw, 0.75rem);
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-heading-small);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  text-align: left;
+  cursor: pointer;
+  padding: clamp(0.35rem, 1vw, 0.5rem) 0;
+}
+
+.chat-thread-row__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.chat-thread-row__main--active {
+  color: var(--color-primary);
+}
+
+.chat-thread-row--project .chat-thread-row__main--active {
+  color: var(--color-text);
+}
+
+.chat-thread-row__icon {
+  --icon-size: clamp(0.875rem, 1.6vw, 1.25rem);
+  flex-shrink: 0;
+}
+
+.chat-thread-tree .chat-thread-row__icon {
+  --icon-size: var(--tree-icon-size);
+}
+
+.chat-thread-row--project .chat-thread-row__label {
+  font-size: var(--font-size-heading-small);
+  font-weight: var(--font-weight-semibold);
+}
+
+.chat-thread-row--thread .chat-thread-row__label {
+  font-weight: var(--font-weight-regular);
+  opacity: 0.92;
+}
+
+.chat-thread-row__leading-icon {
+  --icon-size: clamp(0.8rem, 1.4vw, 1rem);
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.chat-thread-row__action--project {
+  margin-left: 0.15rem;
+  padding-left: 0.15rem;
+  border-left: 1px solid rgba(255, 242, 214, 0.15);
+  border-radius: 0;
+}
+
+.chat-projects {
+  margin-bottom: clamp(1rem, 2.5vw, 1.5rem);
+}
+
+.chat-thread-row__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.chat-thread-row:hover .chat-thread-row__actions,
+.chat-thread-row__actions:hover {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.chat-thread-row__action.primitive-icon-button {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.chat-thread-row__action.primitive-icon-button .primitive-icon {
+  --icon-size: 0.85rem;
+}
