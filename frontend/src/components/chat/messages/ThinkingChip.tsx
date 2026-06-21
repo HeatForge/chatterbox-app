@@ -17,16 +17,18 @@ export default function ThinkingChip({
         type="button"
         className="chat-thinking__toggle"
         onClick={onToggle}
+        aria-expanded={expanded}
       >
-        <Icon name="brain-line" />
+        <Icon name="brain-line" aria-hidden />
         <span>Thinking</span>
         <Icon
           name={expanded ? "up-line" : "down-line"}
           className="chat-thinking__chevron"
+          aria-hidden
         />
       </button>
-      <div className="chat-thinking__extension">
-        <p className="chat-thinking__body">{expanded ? text : ""}<br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/>Dorime</p>
+      <div className="chat-thinking__panel" aria-hidden={!expanded}>
+        <p className="chat-thinking__text">{text}</p>
       </div>
     </div>
   );

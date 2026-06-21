@@ -403,48 +403,18 @@
   word-break: break-word;
 }
 
-/* Thinking (above bubble, expands upward) */
+/* Thinking */
 
 .chat-thinking {
-  --chat-thinking-body-max: 12rem;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-}
-
-.chat-thinking__extension {
-  display: grid;
-  grid-template-rows: 0fr;
-  overflow: hidden;
-  background: var(--color-bg);
-  transition: grid-template-rows 0.25s ease;
-}
-
-.chat-thinking--expanded .chat-thinking__extension {
-  grid-template-rows: 1fr;
-  max-height: var(--chat-thinking-body-max);
-  overflow-y: auto;
-}
-
-.chat-thinking__body {
-  margin: 0;
-  min-height: 0;
-  overflow: hidden;
-  font-size: var(--font-size-heading-small);
-  line-height: 1.4;
-  color: var(--color-text);
-  font-style: italic;
-}
-
-.chat-thinking--expanded .chat-thinking__body {
-  padding: clamp(0.5rem, 1.2vw, 0.75rem) clamp(0.75rem, 2vw, 1rem);
 }
 
 .chat-thinking__toggle {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 0.35rem;
-  align-self: flex-start;
+  width: 100%;
   padding: 0.2rem 0.55rem;
   border: none;
   border-radius: var(--message-border-radius) var(--message-border-radius) 0 0;
@@ -454,11 +424,40 @@
   font-size: var(--font-size-heading-small);
   font-weight: var(--font-weight-medium);
   cursor: pointer;
-  width: 100%;
 }
 
 .chat-thinking__chevron {
   --icon-size: 0.75rem;
+}
+
+.chat-thinking__panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  background: var(--color-bg);
+  transition: grid-template-rows 0.2s ease-in;
+}
+
+.chat-thinking--expanded .chat-thinking__panel {
+  grid-template-rows: 1fr;
+}
+
+.chat-thinking__text {
+  margin: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 clamp(0.75rem, 2vw, 1rem);
+  font-size: var(--font-size-heading-small);
+  line-height: 1.4;
+  font-style: italic;
+  color: var(--color-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-thinking--expanded .chat-thinking__text {
+  max-height: 12rem;
+  overflow-y: auto;
+  padding-block: clamp(0.5rem, 1.2vw, 0.75rem);
 }
 
 /* Tool call panel */
