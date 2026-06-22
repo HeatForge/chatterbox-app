@@ -54,20 +54,21 @@ Packages not yet present: OpenAPI-specific DTO layering beyond records.
 | `App.tsx` | Router shell with `AuthProvider` |
 | `AppRoutes.tsx` | React Router route table |
 | `auth/` | `AuthContext`, `ProtectedRoute` |
-| `pages/` | `SignInPage`, `SignUpPage`, `ChatPage`, `UnauthorizedPage` |
-| `components/` | `SignInForm`, `SignUpForm`, primitives |
+| `pages/` | `SignInPage`, `SignUpPage`, `ChatPage`, `MarkdownShowcasePage`, `UnauthorizedPage` |
+| `components/` | `SignInForm`, `SignUpForm`, primitives, `markdown/LiveMarkdown` |
 | `api/client.ts` | Fetch-based HTTP client (`credentials: "include"`) |
 | `api/auth.ts` | Auth API helpers |
 | `api/chat.ts` | Chat/projects/threads API + SSE streaming helpers |
 | `hooks/useChatStream.ts` | Chat message state + stream handling for `ChatPage` |
 | `utils/parseSseStream.ts` | SSE parser for POST streaming responses |
+| `utils/markdown/parseCommonMark.ts` | CommonMark 0.31.2 parser wrapper (`commonmark` npm) |
 | `__tests__/` | Vitest + Testing Library tests |
 
 ## Tech stack
 
 | Layer | Stack |
 |-------|-------|
-| Frontend | React 19, Vite 6, TypeScript 5.7 (strict), Vitest, React Router |
+| Frontend | React 19, Vite 6, TypeScript 5.7 (strict), Vitest, React Router, commonmark 0.31.2 |
 | Backend | Spring Boot 3.4.1, Java 21, Spring Web, Spring Data JPA, Spring Security, Spring AI 1.0 (OpenRouter via OpenAI-compatible API) |
 | Database | PostgreSQL; Flyway migrations; Hibernate `ddl-auto: validate` |
 | Production | GraalVM native image via `native-maven-plugin` |
@@ -87,6 +88,7 @@ Packages not yet present: OpenAPI-specific DTO layering beyond records.
 | Chat projects & threads | `ProjectController`, `ThreadController`, `V3__chat.sql` | User-scoped projects, nested threads, standalone chats |
 | Streaming chat API | `ChatService`, `ThreadController` | `POST /api/threads/{id}/chat` and `.../regenerate` stream via SSE (`SseEmitter` + Spring AI `ChatClient`) |
 | Chat UI (live) | `ChatPage`, `useChatStream`, `api/chat.ts` | Loads sidebar/messages from API; streams assistant replies; variant navigation + regenerate |
+| Live CommonMark renderer | `LiveMarkdown`, `parseCommonMark.ts` | Assistant messages rendered as CommonMark 0.31.2 during streaming (`safe: true`); dev showcase at `/markdown-showcase` |
 | OpenRouter LLM | `application.yml`, `.env` | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` (default `anthropic/claude-sonnet-4`) |
 | Users table | `V1__init.sql`, `User` entity | Stores `password_hash` (BCrypt) via `V2__auth.sql` |
 | Template cloning | `scripts/clone-template` | See known issues below |

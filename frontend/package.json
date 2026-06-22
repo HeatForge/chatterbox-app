@@ -10,10 +10,12 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
+    "test:commonmark": "vitest run src/__tests__/commonmark.spec.test.ts",
     "test:watch": "vitest"
   },
   "dependencies": {
     "@iconify/react": "^6.0.2",
+    "commonmark": "^0.31.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.18.0"

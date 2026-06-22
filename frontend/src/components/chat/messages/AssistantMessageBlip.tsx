@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ChatMessage, ToolCallStatus } from "../../../utils/types/chat";
+import LiveMarkdown from "../../markdown/LiveMarkdown";
 import MessageActions from "./MessageActions";
 import ThinkingChip from "./ThinkingChip";
 import ToolCallPanel from "./ToolCallPanel";
@@ -37,7 +38,7 @@ export default function AssistantMessageBlip({
               onStatusChange={onToolCallStatusChange}
             />
           ) : null}
-          <p className="chat-message__content">{variant.content}</p>
+          <LiveMarkdown content={variant.content} className="chat-message__content" />
         </div>
         <MessageActions
           content={variant.content}

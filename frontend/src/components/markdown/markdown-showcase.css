@@ -1,0 +1,92 @@
+.markdown-showcase-page {
+  min-height: 100vh;
+  background: var(--color-bg, #1e2621);
+}
+
+.markdown-showcase-page__header {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 0;
+}
+
+.markdown-showcase-page__subtitle {
+  margin: 0.5rem 0 0;
+  color: var(--color-text-muted, #9aa89f);
+}
+
+.markdown-showcase {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+}
+
+.markdown-showcase__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.markdown-showcase__title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.markdown-showcase__meta {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--color-text-muted, #9aa89f);
+}
+
+.markdown-showcase__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 48rem) {
+  .markdown-showcase__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.markdown-showcase__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.markdown-showcase__panel-title {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted, #9aa89f);
+}
+
+.markdown-showcase__source {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: #1a211c;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+.markdown-showcase__rendered {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: #313933;
+  min-height: 3rem;
+}
