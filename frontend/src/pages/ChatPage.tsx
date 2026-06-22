@@ -1,30 +1,32 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ChatComposer,
   ChatContextSidebar,
   ChatLayout,
   ChatMessageList,
   ChatSidebar,
-  INITIAL_MESSAGES,
-  MOCK_CHAT_THREADS,
-  MOCK_PROJECTS,
 } from "../components/chat";
+import { chatApi } from "../api/chat";
+import { useChatStream } from "../hooks/useChatStream";
 import { useResizable } from "../utils/hooks/useResizable";
-import type { ChatMessage, ToolCallStatus } from "../utils/types/chat";
+import type { Project, ToolCallStatus } from "../utils/types/chat";
 import "./global-pages.css";
 
-let nextMessageId = 100;
-
-function createId(prefix: string) {
-  nextMessageId += 1;
-  return `${prefix}-${nextMessageId}`;
-}
-
 export default function ChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(
-    "chat-1",
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [chatThreads, setChatThreads] = useState<Array<{ id: string; title: string }>>(
+    [],
   );
+  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+
+  const {
+    messages,
+    isStreaming,
+    isLoading,
+    sendMessage,
+    handlePrevVariant,
+    handleNextVariant,
+  } = useChatStream(selectedThreadId);
 
   const leftPanel = useResizable({
     initialWidth: 400,
@@ -40,77 +42,48 @@ export default function ChatPage() {
     side: "right",
   });
 
-  const handleSend = useCallback((text: string) => {
-    const userMessage: ChatMessage = {
-      id: createId("msg"),
-      role: "user",
-      variants: [{ content: text }],
-      activeVariantIndex: 0,
-    };
-
-    const assistantMessage: ChatMessage = {
-      id: createId("msg"),
-      role: "assistant",
-      variants: [
-        {
-          content: `Here's a placeholder reply to: "${text}"`,
-        },
-        {
-          content: `Alternate take — I understood your message as: "${text}". A fuller answer will connect to the backend later.`,
-        },
-      ],
-      activeVariantIndex: 0,
-      thinking: "Composing a response based on the latest message…",
-    };
-
-    setMessages((prev) => [...prev, userMessage, assistantMessage]);
+  const refreshSidebar = useCallback(async () => {
+    const [loadedProjects, loadedThreads] = await Promise.all([
+      chatApi.listProjects(),
+      chatApi.listThreads(),
+    ]);
+    setProjects(loadedProjects);
+    setChatThreads(loadedThreads);
   }, []);
 
-  const handlePrevVariant = useCallback((messageId: string) => {
-    setMessages((prev) =>
-      prev.map((message) => {
-        if (message.id !== messageId || message.activeVariantIndex === 0) {
-          return message;
-        }
-        return {
-          ...message,
-          activeVariantIndex: message.activeVariantIndex - 1,
-        };
-      }),
-    );
-  }, []);
+  useEffect(() => {
+    void refreshSidebar().then(async () => {
+      const threads = await chatApi.listThreads();
+      if (threads.length > 0) {
+        setSelectedThreadId((current) => current ?? threads[0].id);
+      }
+    });
+  }, [refreshSidebar]);
 
-  const handleNextVariant = useCallback((messageId: string) => {
-    setMessages((prev) =>
-      prev.map((message) => {
-        if (
-          message.id !== messageId ||
-          message.activeVariantIndex >= message.variants.length - 1
-        ) {
-          return message;
-        }
-        return {
-          ...message,
-          activeVariantIndex: message.activeVariantIndex + 1,
-        };
-      }),
-    );
-  }, []);
+  const handleSend = useCallback(
+    (text: string) => {
+      void sendMessage(text);
+    },
+    [sendMessage],
+  );
 
   const handleToolCallStatusChange = useCallback(
-    (messageId: string, status: ToolCallStatus) => {
-      setMessages((prev) =>
-        prev.map((message) => {
-          if (message.id !== messageId || !message.toolCall) return message;
-          return {
-            ...message,
-            toolCall: { ...message.toolCall, status },
-          };
-        }),
-      );
+    (_messageId: string, _status: ToolCallStatus) => {
+      // Tool calls are deferred in v1.
     },
     [],
   );
+
+  const handleNewChat = useCallback(async () => {
+    const thread = await chatApi.createThread();
+    await refreshSidebar();
+    setSelectedThreadId(thread.id);
+  }, [refreshSidebar]);
+
+  const handleNewProject = useCallback(async () => {
+    await chatApi.createProject("New project");
+    await refreshSidebar();
+  }, [refreshSidebar]);
 
   return (
     <main className="page page-chat">
@@ -118,19 +91,25 @@ export default function ChatPage() {
         <ChatSidebar
           width={leftPanel.width}
           resizeHandleProps={leftPanel.handleProps}
-          projects={MOCK_PROJECTS}
-          chatThreads={MOCK_CHAT_THREADS}
+          projects={projects}
+          chatThreads={chatThreads}
           selectedThreadId={selectedThreadId}
           onSelectThread={setSelectedThreadId}
+          onNewChat={handleNewChat}
+          onNewProject={handleNewProject}
         />
         <div className="chat-layout__main">
-          <ChatMessageList
-            messages={messages}
-            onPrevVariant={handlePrevVariant}
-            onNextVariant={handleNextVariant}
-            onToolCallStatusChange={handleToolCallStatusChange}
-          />
-          <ChatComposer onSend={handleSend} />
+          {isLoading && messages.length === 0 ? (
+            <p className="chat-layout__status">Loading messages…</p>
+          ) : (
+            <ChatMessageList
+              messages={messages}
+              onPrevVariant={handlePrevVariant}
+              onNextVariant={handleNextVariant}
+              onToolCallStatusChange={handleToolCallStatusChange}
+            />
+          )}
+          <ChatComposer onSend={handleSend} disabled={isStreaming || !selectedThreadId} />
         </div>
         <ChatContextSidebar
           width={rightPanel.width}
