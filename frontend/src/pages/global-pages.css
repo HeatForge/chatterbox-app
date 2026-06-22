@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg);
+  background: var(--color-bg-darker);
   overflow: hidden;
 }
 
@@ -76,7 +76,7 @@
   padding: clamp(1rem, 3vw, 1.5rem);
   border: 1px solid rgba(255, 242, 214, 0.12);
   border-radius: 0.75rem;
-  background: rgba(0, 0, 0, 0.18);
+  background: var(--color-bg-darker);
 }
 
 .page-chat__greeting {

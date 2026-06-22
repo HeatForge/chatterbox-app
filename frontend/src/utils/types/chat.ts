@@ -29,4 +29,5 @@ export interface ChatMessage {
   activeVariantIndex: number;
   thinking?: string;
   toolCall?: ToolCall;
+  error?: string;
 }

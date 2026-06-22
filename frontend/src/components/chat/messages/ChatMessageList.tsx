@@ -5,6 +5,7 @@ import UserMessageBlip from "./UserMessageBlip";
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
+  streamingMessageId?: string | null;
   onPrevVariant: (messageId: string) => void;
   onNextVariant: (messageId: string) => void;
   onToolCallStatusChange: (
@@ -15,6 +16,7 @@ interface ChatMessageListProps {
 
 export default function ChatMessageList({
   messages,
+  streamingMessageId = null,
   onPrevVariant,
   onNextVariant,
   onToolCallStatusChange,
@@ -39,6 +41,7 @@ export default function ChatMessageList({
           <AssistantMessageBlip
             key={message.id}
             message={message}
+            isGenerating={streamingMessageId === message.id}
             onPrevVariant={() => onPrevVariant(message.id)}
             onNextVariant={() => onNextVariant(message.id)}
             onToolCallStatusChange={(status) =>

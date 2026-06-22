@@ -6,8 +6,8 @@
 
 body {
   font-family: var(--font-family, "SN Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
-  background: var(--color-bg, #222b25);
-  color: var(--color-text, #fff2d6);
+  background: var(--color-bg-darker);
+  color: var(--color-text);
   min-height: 100vh;
   font-optical-sizing: auto;
   font-style: normal;

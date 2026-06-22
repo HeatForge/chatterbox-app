@@ -23,6 +23,7 @@ export default function ChatPage() {
     messages,
     isStreaming,
     isLoading,
+    streamingMessageId,
     sendMessage,
     handlePrevVariant,
     handleNextVariant,
@@ -42,23 +43,38 @@ export default function ChatPage() {
     side: "right",
   });
 
-  const refreshSidebar = useCallback(async () => {
+  const fetchSidebarData = useCallback(async () => {
     const [loadedProjects, loadedThreads] = await Promise.all([
       chatApi.listProjects(),
       chatApi.listThreads(),
     ]);
-    setProjects(loadedProjects);
-    setChatThreads(loadedThreads);
+    return { loadedProjects, loadedThreads };
   }, []);
 
+  const refreshSidebar = useCallback(async () => {
+    const { loadedProjects, loadedThreads } = await fetchSidebarData();
+    setProjects(loadedProjects);
+    setChatThreads(loadedThreads);
+  }, [fetchSidebarData]);
+
   useEffect(() => {
-    void refreshSidebar().then(async () => {
-      const threads = await chatApi.listThreads();
-      if (threads.length > 0) {
-        setSelectedThreadId((current) => current ?? threads[0].id);
+    let cancelled = false;
+
+    void fetchSidebarData().then(({ loadedProjects, loadedThreads }) => {
+      if (cancelled) {
+        return;
+      }
+      setProjects(loadedProjects);
+      setChatThreads(loadedThreads);
+      if (loadedThreads.length > 0) {
+        setSelectedThreadId((current) => current ?? loadedThreads[0].id);
       }
     });
-  }, [refreshSidebar]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchSidebarData]);
 
   const handleSend = useCallback(
     (text: string) => {
@@ -68,9 +84,9 @@ export default function ChatPage() {
   );
 
   const handleToolCallStatusChange = useCallback(
-    (_messageId: string, _status: ToolCallStatus) => {
-      // Tool calls are deferred in v1.
-    },
+    // Tool calls are deferred in v1.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    (_messageId: string, _status: ToolCallStatus) => {},
     [],
   );
 
@@ -104,6 +120,7 @@ export default function ChatPage() {
           ) : (
             <ChatMessageList
               messages={messages}
+              streamingMessageId={streamingMessageId}
               onPrevVariant={handlePrevVariant}
               onNextVariant={handleNextVariant}
               onToolCallStatusChange={handleToolCallStatusChange}

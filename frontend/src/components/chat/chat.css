@@ -3,8 +3,5 @@
 @import "./sidebar/thread-row.css";
 @import "./sidebar/thread-tree.css";
 @import "./sidebar/chat-thread-list.css";
-@import "./messages/chat-message.css";
-@import "./messages/thinking-chip.css";
-@import "./messages/tool-call-panel.css";
-@import "./messages/message-actions.css";
+@import "./messages/messages.css";
 @import "./composer/chat-composer.css";

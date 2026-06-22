@@ -4,6 +4,7 @@ interface MessageActionsProps {
   content: string;
   variantIndex: number;
   variantCount: number;
+  isLoading?: boolean;
   onPrevVariant: () => void;
   onNextVariant: () => void;
 }
@@ -12,10 +13,12 @@ export default function MessageActions({
   content,
   variantIndex,
   variantCount,
+  isLoading = false,
   onPrevVariant,
   onNextVariant,
 }: MessageActionsProps) {
   const hasVariants = variantCount > 1;
+  const isLastVariant = variantIndex >= variantCount - 1;
 
   async function handleCopy() {
     try {
@@ -33,27 +36,29 @@ export default function MessageActions({
         className="chat-message-actions__btn"
         onClick={handleCopy}
       />
-      {hasVariants ? (
-        <div className="chat-message-actions__variants">
-          <IconButton
-            icon="left-line"
-            label="Previous answer"
-            className="chat-message-actions__btn"
-            onClick={onPrevVariant}
-            disabled={variantIndex === 0}
-          />
-          <span className="chat-message-actions__counter">
-            {variantIndex + 1} / {variantCount}
-          </span>
-          <IconButton
-            icon="right-line"
-            label="Next answer"
-            className="chat-message-actions__btn"
-            onClick={onNextVariant}
-            disabled={variantIndex === variantCount - 1}
-          />
-        </div>
-      ) : null}
+      <div className="chat-message-actions__variants">
+        {hasVariants ? (
+          <>
+            <IconButton
+              icon="left-line"
+              label="Previous answer"
+              className="chat-message-actions__btn"
+              onClick={onPrevVariant}
+              disabled={isLoading || variantIndex === 0}
+            />
+            <span className="chat-message-actions__counter">
+              {variantIndex + 1} / {variantCount}
+            </span>
+          </>
+        ) : null}
+        <IconButton
+          icon="right-line"
+          label={isLastVariant ? "Regenerate answer" : "Next answer"}
+          className="chat-message-actions__btn"
+          onClick={onNextVariant}
+          disabled={isLoading}
+        />
+      </div>
     </div>
   );
 }

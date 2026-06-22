@@ -1,6 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { chatApi } from "../api/chat";
+import { ApiError } from "../api/client";
 import type { ChatMessage } from "../utils/types/chat";
+
+function streamErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return "Something went wrong. Please try again.";
+}
 
 let tempIdCounter = 0;
 
@@ -32,7 +43,46 @@ export function useChatStream(threadId: string | null) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
+    null,
+  );
   const streamGenerationRef = useRef(0);
+
+  const applyStreamError = useCallback(
+    (
+      messageId: string,
+      error: unknown,
+      options?: { revertVariant?: boolean },
+    ) => {
+      const message = streamErrorMessage(error);
+      setMessages((prev) =>
+        prev.map((item) => {
+          if (item.id !== messageId) {
+            return item;
+          }
+
+          let variants = item.variants;
+          let activeVariantIndex = item.activeVariantIndex;
+
+          if (options?.revertVariant && variants.length > 1) {
+            variants = variants.slice(0, -1);
+            activeVariantIndex = Math.min(activeVariantIndex, variants.length - 1);
+          }
+
+          return {
+            ...item,
+            variants,
+            activeVariantIndex,
+            thinking: undefined,
+            error: message,
+          };
+        }),
+      );
+      setIsStreaming(false);
+      setStreamingMessageId(null);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!threadId) {
@@ -74,6 +124,7 @@ export function useChatStream(threadId: string | null) {
 
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
       setIsStreaming(true);
+      setStreamingMessageId(assistantMessage.id);
 
       try {
         await chatApi.streamChat(threadId, text.trim(), {
@@ -88,6 +139,7 @@ export function useChatStream(threadId: string | null) {
                 }
                 return {
                   ...message,
+                  error: undefined,
                   variants: [{ content: message.variants[0].content + delta }],
                 };
               }),
@@ -124,24 +176,28 @@ export function useChatStream(threadId: string | null) {
                     id: payload.assistantMessageId,
                     variants: [{ content: payload.content }],
                     thinking: payload.thinking ?? undefined,
+                    error: undefined,
                   };
                 }
                 return message;
               }),
             );
             setIsStreaming(false);
+            setStreamingMessageId(null);
           },
-          onError: () => {
+          onError: (error) => {
             if (generation === streamGenerationRef.current) {
-              setIsStreaming(false);
+              applyStreamError(assistantMessage.id, error);
             }
           },
         });
-      } catch {
-        setIsStreaming(false);
+      } catch (error) {
+        if (generation === streamGenerationRef.current) {
+          applyStreamError(assistantMessage.id, error);
+        }
       }
     },
-    [isStreaming, threadId],
+    [applyStreamError, isStreaming, threadId],
   );
 
   const regenerate = useCallback(
@@ -164,12 +220,14 @@ export function useChatStream(threadId: string | null) {
             ...message,
             activeVariantIndex: variantIndex,
             thinking: "",
+            error: undefined,
             variants: [...message.variants, { content: "" }],
           };
         }),
       );
 
       setIsStreaming(true);
+      setStreamingMessageId(messageId);
 
       try {
         await chatApi.streamRegenerate(threadId, messageId, {
@@ -185,7 +243,7 @@ export function useChatStream(threadId: string | null) {
                 const variants = [...message.variants];
                 const current = variants[variantIndex] ?? { content: "" };
                 variants[variantIndex] = { content: current.content + delta };
-                return { ...message, variants };
+                return { ...message, error: undefined, variants };
               }),
             );
           },
@@ -220,22 +278,26 @@ export function useChatStream(threadId: string | null) {
                   ...message,
                   variants,
                   thinking: payload.thinking ?? undefined,
+                  error: undefined,
                 };
               }),
             );
             setIsStreaming(false);
+            setStreamingMessageId(null);
           },
-          onError: () => {
+          onError: (error) => {
             if (generation === streamGenerationRef.current) {
-              setIsStreaming(false);
+              applyStreamError(messageId, error, { revertVariant: true });
             }
           },
         });
-      } catch {
-        setIsStreaming(false);
+      } catch (error) {
+        if (generation === streamGenerationRef.current) {
+          applyStreamError(messageId, error, { revertVariant: true });
+        }
       }
     },
-    [isStreaming, threadId],
+    [applyStreamError, isStreaming, threadId],
   );
 
   const setActiveVariant = useCallback(
@@ -291,6 +353,7 @@ export function useChatStream(threadId: string | null) {
     messages,
     isStreaming,
     isLoading,
+    streamingMessageId,
     sendMessage,
     handlePrevVariant,
     handleNextVariant,

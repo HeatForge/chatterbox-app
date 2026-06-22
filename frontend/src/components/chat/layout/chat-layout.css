@@ -3,7 +3,6 @@
   height: 100vh;
   width: 100%;
   overflow: hidden;
-  background: var(--color-bg);
 }
 
 .chat-layout__main {
@@ -49,7 +48,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   padding: clamp(1.5rem, 3vw, 3.125rem) clamp(1rem, 2.5vw, 3rem)
-    clamp(1rem, 2vw, 1.5rem);
+    clamp(1rem, 2vw, 1.5rem) clamp(0.5rem, 2vw, 1rem);
 }
 
 .chat-sidebar__resize-handle,
@@ -107,8 +106,8 @@
 }
 
 .chat-sidebar__footer-btn.primitive-icon-button {
-  width: clamp(3rem, 7vw, 4.6875rem);
-  height: clamp(3rem, 7vw, 4.6875rem);
+  width: clamp(1rem, 7vw, 3rem);
+  height: clamp(1rem, 7vw, 3rem);
   border-radius: clamp(0.625rem, 1.5vw, 0.9375rem);
   background: #313933;
 }
@@ -118,8 +117,8 @@
 }
 
 .chat-sidebar__footer-btn--placeholder {
-  width: clamp(3rem, 7vw, 4.6875rem);
-  height: clamp(3rem, 7vw, 4.6875rem);
+  width: clamp(1rem, 7vw, 3rem);
+  height: clamp(1rem, 7vw, 3rem);
   border-radius: clamp(0.625rem, 1.5vw, 0.9375rem);
   background: #313933;
   opacity: 0.55;
