@@ -6,7 +6,7 @@ LLMs via OpenRouter, image gen via fal.ai, auth via Better Auth (Postgres),
 storage via MinIO/S3. Deployed via Docker on a personal VPS behind Nginx.
 
 ## Stack
-- Next.js 15 (App Router), React 19, TypeScript strict
+- Next.js (App Router), React 19, TypeScript strict
 - Vercel AI SDK v6 (streaming, tools)
 - assistant-ui (chat UI), shadcn/ui (components)
 - Kysely (DB queries), Postgres + pgvector
@@ -35,13 +35,13 @@ storage via MinIO/S3. Deployed via Docker on a personal VPS behind Nginx.
 7. CSS Modules for homegrown components; Tailwind only inside shadcn
 
 ## Commands
-- `pnpm dev` — Local dev
-- `pnpm build` — Production build
-- `pnpm check` — Biome lint + format check
-- `pnpm typecheck` — TypeScript
-- `pnpm test` — Vitest
-- `pnpm test:e2e` — Playwright
-- `pnpm db:migrate` — Run SQL migrations
+- `npm dev` — Local dev
+- `npm build` — Production build
+- `npm check` — Biome lint + format check
+- `npm typecheck` — TypeScript
+- `npm test` — Vitest
+- `npm test:e2e` — Playwright
+- `npm db:migrate` — Run SQL migrations
 
 ## Reference Docs
 For detailed info on specific areas, see:
