@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "biome check",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "icons:generate": "node scripts/generate-icon-names.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.74",
@@ -28,6 +29,9 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
+    "@iconify-json/mingcute": "^1.2.7",
+    "@iconify/react": "^6.0.2",
+    "@iconify/types": "^2.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
