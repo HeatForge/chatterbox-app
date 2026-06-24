@@ -4,5 +4,6 @@
     "*.csv": "duckdb.dataFileViewer",
     "*.tsv": "duckdb.dataFileViewer",
     "*.xlsx": "duckdb.dataFileViewer"
-  }
+  },
+  "java.compile.nullAnalysis.mode": "disabled"
 }

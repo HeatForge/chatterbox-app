@@ -8,7 +8,7 @@ storage via MinIO/S3. Deployed via Docker on a personal VPS behind Nginx.
 ## Stack
 - Next.js (App Router), React 19, TypeScript strict
 - Vercel AI SDK v6 (streaming, tools)
-- assistant-ui (chat UI), shadcn/ui (components)
+- assistant-ui (chat UI)
 - Kysely (DB queries), Postgres + pgvector
 - Biome (lint+format), Vitest + Playwright (tests)
 - Better Auth (auth), OpenRouter (LLMs), fal.ai (images)
@@ -21,8 +21,7 @@ storage via MinIO/S3. Deployed via Docker on a personal VPS behind Nginx.
 - `lib/db/` — Kysely client + schema types
 - `lib/storage.ts` — S3/MinIO client
 - `lib/auth.ts` — Better Auth config
-- `components/chat/` — assistant-ui customizations
-- `components/ui/` — shadcn primitives (don't edit)
+- `components/chat/` — Chat UI components
 - `db/migrations/` — Plain SQL migration files
 
 ## Conventions
@@ -32,7 +31,7 @@ storage via MinIO/S3. Deployed via Docker on a personal VPS behind Nginx.
 4. Validate external inputs with Zod (request bodies, AI tool args, file uploads)
 5. Don't validate internal function calls (TS handles it)
 6. Server Components by default; `'use client'` only for interactive UI
-7. CSS Modules for homegrown components; Tailwind only inside shadcn
+7. CSS Modules for component styles
 
 ## Commands
 - `npm dev` — Local dev
