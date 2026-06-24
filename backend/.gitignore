@@ -1,5 +1,0 @@
-.env
-target/
-*.class
-*.jar
-*.war
