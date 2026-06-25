@@ -1,6 +1,6 @@
 "use client";
 
-import { BannerBar } from "@/hooks/use-banner/banner-bar";
+import { Banner } from "@/hooks/use-banner/banner";
 import type { BannerItem } from "@/hooks/use-banner/types";
 import { ModalOverlay } from "@/hooks/use-modal/modal-overlay";
 import type { ModalItem } from "@/hooks/use-modal/types";
@@ -28,7 +28,7 @@ export function EventOverlays({
     <>
       <ToastStack toasts={toasts} onDismiss={onDismissToast} />
       {banners.map((banner) => (
-        <BannerBar
+        <Banner
           key={banner.id}
           banner={banner}
           onDismiss={() => onDismissBanner(banner.id)}

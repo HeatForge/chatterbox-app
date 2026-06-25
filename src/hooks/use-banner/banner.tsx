@@ -9,12 +9,12 @@ import { IconNames } from "@/lib/IconNames";
 import styles from "./banner.module.css";
 import type { BannerItem } from "./types";
 
-type BannerBarProps = {
+type BannerProps = {
   banner: BannerItem;
   onDismiss: () => void;
 };
 
-export function BannerBar({ banner, onDismiss }: BannerBarProps) {
+export function Banner({ banner, onDismiss }: BannerProps) {
   const dismissable = banner.dismissable ?? true;
   const icon = banner.icon ?? intentDefaultIcon(banner.intent);
 

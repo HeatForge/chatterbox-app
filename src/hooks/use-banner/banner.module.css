@@ -1,13 +1,19 @@
 .banner {
   position: fixed;
-  left: 0;
-  right: 0;
+  margin-top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+
+  max-width: 48rem;
   z-index: 8500;
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
+
   padding: 0.875rem 1.25rem;
-  border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 0.75rem;
+
   background: #171717;
   color: #fafafa;
   box-shadow: 0 8px 24px rgb(0 0 0 / 28%);
@@ -17,6 +23,7 @@
   top: 0;
   border-bottom-style: solid;
   border-top: none;
+  animation: banner-enters-from-top 0.35s ease-out;
 }
 
 .banner[data-placement="bottom"] {
@@ -24,6 +31,7 @@
   border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent);
   border-bottom: none;
   box-shadow: 0 -8px 24px rgb(0 0 0 / 28%);
+  animation: banner-enters-from-bottom 0.35s ease-out;
 }
 
 .banner[data-intent="primary"] {
@@ -61,6 +69,23 @@
   background: #0c1a2e;
 }
 
+@keyframes banner-enters-from-top {
+  from {
+    transform: translateY(-5rem) translateX(-50%);
+  }
+  to {
+    transform: translateY(0) translateX(-50%);
+  }
+}
+
+@keyframes banner-enters-from-bottom {
+  from {
+    transform: translateY(5rem);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
 .inner {
   display: flex;
   align-items: flex-start;
@@ -78,6 +103,10 @@
 .content {
   flex: 1;
   min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .title {
