@@ -10,9 +10,9 @@ In all aspects a darkerand lighter shade is needed for effects such as hover, pr
   secondary-color: #1C9A11
   tertiary-color: #263E62
   accent-color: #B47AF2
-  info-color: dunno but some lighter primary
-  warn-color: dunno but some yellow-orange combo
-  error-color: dunno but some red
+  info-color: #6ba3ff
+  warn-color: #e5a820
+  error-color: #e5484d
 } 
 ```
 # Font

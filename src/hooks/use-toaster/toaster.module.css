@@ -89,7 +89,7 @@
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  
+
   max-height: min(10rem, calc(100vh - 4rem));
   width: 100%;
 
@@ -97,47 +97,47 @@
 
   padding: 0.875rem 1rem;
   border-radius: 0.75rem;
-  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
-  background: #171717;
-  color: #fafafa;
+  border: 1px solid var(--surface-overlay-border);
+  background: var(--surface-overlay);
+  color: var(--color-text);
   box-shadow:
     0 10px 30px rgb(0 0 0 / 35%),
-    0 0 0 1px rgb(255 255 255 / 4%);
+    0 0 0 1px color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .toast[data-intent="primary"] {
-  color: #93c5fd;
-  background: #0f172a;
+  color: var(--intent-primary-fg);
+  background: var(--intent-primary-bg);
 }
 
 .toast[data-intent="secondary"] {
-  color: #d4d4d8;
-  background: #18181b;
+  color: var(--intent-secondary-fg);
+  background: var(--intent-secondary-bg);
 }
 
 .toast[data-intent="tertiary"] {
-  color: #a5b4fc;
-  background: #1e1b4b;
+  color: var(--intent-tertiary-fg);
+  background: var(--intent-tertiary-bg);
 }
 
 .toast[data-intent="warning"] {
-  color: #fcd34d;
-  background: #292524;
+  color: var(--intent-warning-fg);
+  background: var(--intent-warning-bg);
 }
 
 .toast[data-intent="danger"] {
-  color: #fca5a5;
-  background: #2a1215;
+  color: var(--intent-danger-fg);
+  background: var(--intent-danger-bg);
 }
 
 .toast[data-intent="success"] {
-  color: #86efac;
-  background: #14261a;
+  color: var(--intent-success-fg);
+  background: var(--intent-success-bg);
 }
 
 .toast[data-intent="info"] {
-  color: #7dd3fc;
-  background: #0c1a2e;
+  color: var(--intent-info-fg);
+  background: var(--intent-info-bg);
 }
 @keyframes toast-enters-from-top {
   from {
@@ -186,7 +186,7 @@
   font-size: 0.9rem;
   font-weight: 600;
   line-height: 1.35;
-  color: #fafafa;
+  color: var(--color-text);
 }
 
 .description {
@@ -198,7 +198,7 @@
   margin: 0.25rem 0 0;
   font-size: 0.8125rem;
   line-height: 1.45;
-  color: rgb(250 250 250 / 72%);
+  color: var(--color-text-muted);
 }
 
 .dismiss {
@@ -219,7 +219,7 @@
 
 .dismiss:hover {
   opacity: 1;
-  background: rgb(255 255 255 / 8%);
+  background: var(--surface-interactive-hover);
 }
 
 .dismissIcon {

@@ -1,0 +1,108 @@
+:root {
+  /* Background */
+  --color-background: #222b25;
+  --color-background-light: #2e3831;
+  --color-background-dark: #1a211c;
+
+  /* Text */
+  --color-text: #fff2d6;
+  --color-text-muted: color-mix(in srgb, var(--color-text) 72%, transparent);
+
+  /* Brand */
+  --color-primary: #3884ff;
+  --color-primary-light: #6ba3ff;
+  --color-primary-dark: #2669d4;
+
+  --color-secondary: #1c9a11;
+  --color-secondary-light: #3ab82f;
+  --color-secondary-dark: #147a0d;
+
+  --color-tertiary: #263e62;
+  --color-tertiary-light: #3a5a8c;
+  --color-tertiary-dark: #1a2d4a;
+
+  --color-accent: #b47af2;
+  --color-accent-light: #c99af7;
+  --color-accent-dark: #9558d4;
+
+  /* Semantic */
+  --color-info: #6ba3ff;
+  --color-info-light: #9cc4ff;
+  --color-info-dark: #4a8ae8;
+
+  --color-warn: #e5a820;
+  --color-warn-light: #f5c542;
+  --color-warn-dark: #c48a10;
+
+  --color-error: #e5484d;
+  --color-error-light: #f07075;
+  --color-error-dark: #c53035;
+
+  /* Typography */
+  --font-sans: "SN Pro Variable", system-ui, sans-serif;
+
+  /* Surfaces */
+  --surface-overlay: var(--color-background-light);
+  --surface-overlay-border: color-mix(
+    in srgb,
+    var(--color-text) 18%,
+    transparent
+  );
+  --surface-overlay-shadow: 0 8px 24px rgb(0 0 0 / 28%);
+  --surface-overlay-shadow-up: 0 -8px 24px rgb(0 0 0 / 28%);
+  --surface-interactive-hover: color-mix(
+    in srgb,
+    var(--color-text) 8%,
+    transparent
+  );
+
+  /* Intent surfaces (banner, toast, etc.) */
+  --intent-primary-fg: var(--color-primary-light);
+  --intent-primary-bg: color-mix(
+    in srgb,
+    var(--color-primary) 14%,
+    var(--color-background-dark)
+  );
+
+  --intent-secondary-fg: var(--color-secondary-light);
+  --intent-secondary-bg: color-mix(
+    in srgb,
+    var(--color-secondary) 14%,
+    var(--color-background-dark)
+  );
+
+  --intent-tertiary-fg: var(--color-tertiary-light);
+  --intent-tertiary-bg: color-mix(
+    in srgb,
+    var(--color-tertiary) 22%,
+    var(--color-background-dark)
+  );
+
+  --intent-warning-fg: var(--color-warn-light);
+  --intent-warning-bg: color-mix(
+    in srgb,
+    var(--color-warn) 16%,
+    var(--color-background-dark)
+  );
+
+  --intent-danger-fg: var(--color-error-light);
+  --intent-danger-bg: color-mix(
+    in srgb,
+    var(--color-error) 16%,
+    var(--color-background-dark)
+  );
+
+  --intent-success-fg: var(--color-secondary-light);
+  --intent-success-bg: color-mix(
+    in srgb,
+    var(--color-secondary) 14%,
+    var(--color-background-dark)
+  );
+
+  --intent-info-fg: var(--color-info-light);
+  --intent-info-bg: color-mix(
+    in srgb,
+    var(--color-info) 14%,
+    var(--color-background-dark)
+  );
+}
