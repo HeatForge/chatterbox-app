@@ -10,6 +10,7 @@ import { useModal } from "@/hooks/use-modal/use-modal";
 import { ToastPlacement } from "@/hooks/use-toaster/types";
 import { useToaster } from "@/hooks/use-toaster/use-toaster";
 import { Intent } from "@/lib/Intent";
+import { Button } from "../lib/button/Button";
 
 export default function ChatView() {
   const showToast = useToaster();
@@ -50,41 +51,38 @@ export default function ChatView() {
             Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
             eiusmod tempor incididunt ut labore et dolore magna aliqua.
           </p>
-          <button type="button" onClick={dismiss}>
-            Dismiss
-          </button>
+          <Button 
+            text="Dismiss"
+            leftIcon={IconNames["close-line"]}
+            onClick={dismiss}
+            intent={Intent.DANGER}
+            iconSize={32}
+          />
         </>
       ),
     });
   }
   return (
-    <main>
+    <main style={{ display: "flex", flexDirection: "row", gap: "1rem", alignItems: "center", justifyContent: "center" }}>
         <Icon icon={IconNames["home-2-fill"]} />
         Hello World!
-        <button
-          type="button"
-          onClick={() => {
-            handleShowToast();
-          }}
-        >
-          Click me
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            handleShowBanner();
-          }}
-        >
-          Click me
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            handleShowModal();
-          }}
-        >
-          Click me
-        </button>
+        <Button
+          text="Toaster"
+          onClick={handleShowToast}
+          intent={Intent.INFO}
+          leftIcon={IconNames["information-line"]}
+        />
+        <Button
+          text="Banner"
+          onClick={handleShowBanner}
+          intent={Intent.WARNING}
+          rightIcon={IconNames["alert-line"]}
+        />
+        <Button
+          onClick={handleShowModal}
+          intent={Intent.DANGER}
+          leftIcon={IconNames["square-arrow-up-line"]}
+        />
       </main>
   );
 }

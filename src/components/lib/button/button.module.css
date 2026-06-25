@@ -1,0 +1,185 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  padding: 0.5rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1;
+
+  color: var(--color-text);
+  background: var(--color-primary);
+  cursor: pointer;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.button[data-icon-only] {
+  padding: 0.5rem;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--color-primary-light);
+  outline-offset: 2px;
+}
+
+.button[data-intent="primary"] {
+  background: var(--color-primary);
+  border-color: var(--color-primary-dark);
+}
+
+.button[data-intent="primary"]:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+.button[data-intent="primary"]:active:not(:disabled) {
+  background: var(--color-primary-dark);
+  border-color: color-mix(in srgb, var(--color-primary-dark) 80%, black);
+}
+
+.button[data-intent="secondary"] {
+  background: var(--color-secondary);
+  border-color: var(--color-secondary-dark);
+}
+
+.button[data-intent="secondary"]:hover:not(:disabled) {
+  background: var(--color-secondary-dark);
+}
+
+.button[data-intent="secondary"]:active:not(:disabled) {
+  background: var(--color-secondary-dark);
+  border-color: color-mix(in srgb, var(--color-secondary-dark) 80%, black);
+}
+
+.button[data-intent="tertiary"] {
+  color: var(--intent-tertiary-fg);
+  background: var(--intent-tertiary-bg);
+  border-color: color-mix(in srgb, var(--color-tertiary-light) 35%, transparent);
+}
+
+.button[data-intent="tertiary"]:hover:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--color-tertiary) 30%,
+    var(--color-background-dark)
+  );
+}
+
+.button[data-intent="tertiary"]:active:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--color-tertiary) 38%,
+    var(--color-background-dark)
+  );
+}
+
+.button[data-intent="warning"] {
+  color: var(--intent-warning-fg);
+  background: var(--intent-warning-bg);
+  border-color: color-mix(in srgb, var(--color-warn) 40%, transparent);
+}
+
+.button[data-intent="warning"]:hover:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--color-warn) 24%,
+    var(--color-background-dark)
+  );
+}
+
+.button[data-intent="warning"]:active:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--color-warn) 32%,
+    var(--color-background-dark)
+  );
+}
+
+.button[data-intent="danger"] {
+  color: var(--intent-danger-fg);
+  background: var(--intent-danger-bg);
+  border-color: color-mix(in srgb, var(--color-error) 40%, transparent);
+}
+
+.button[data-intent="danger"]:hover:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--color-error) 24%,
+    var(--color-background-dark)
+  );
+}
+
+.button[data-intent="danger"]:active:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--color-error) 32%,
+    var(--color-background-dark)
+  );
+}
+
+.button[data-intent="success"] {
+  color: var(--intent-success-fg);
+  background: var(--intent-success-bg);
+  border-color: color-mix(in srgb, var(--color-secondary) 40%, transparent);
+}
+
+.button[data-intent="success"]:hover:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--color-secondary) 24%,
+    var(--color-background-dark)
+  );
+}
+
+.button[data-intent="success"]:active:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--color-secondary) 32%,
+    var(--color-background-dark)
+  );
+}
+
+.button[data-intent="info"] {
+  color: var(--intent-info-fg);
+  background: var(--intent-info-bg);
+  border-color: color-mix(in srgb, var(--color-info) 40%, transparent);
+}
+
+.button[data-intent="info"]:hover:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--color-info) 24%,
+    var(--color-background-dark)
+  );
+}
+
+.button[data-intent="info"]:active:not(:disabled) {
+  background: color-mix(
+    in srgb,
+    var(--color-info) 32%,
+    var(--color-background-dark)
+  );
+}
+
+.text {
+  white-space: nowrap;
+}
+
+.icon {
+  flex-shrink: 0;
+}
