@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
+
+import { EventProvider } from "@/hooks/event-provider/event-provider";
+
 import "./globals.css";
 
 const jetbrainsMono = JetBrains_Mono({
@@ -32,7 +35,9 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${jetbrainsMono.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        <EventProvider>{children}</EventProvider>
+      </body>
     </html>
   );
 }
