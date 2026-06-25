@@ -17,21 +17,26 @@ export default function ChatView() {
   const showModal = useModal();
 
   function handleShowToast(): void {
+    const randomIntent = Object.values(Intent)[Math.floor(Math.random() * Object.values(Intent).length)];
+
     showToast({
       title: "Hello World",
       description:
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-      intent: Intent.INFO,
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      intent: randomIntent,
       placement: ToastPlacement.BOTTOM_RIGHT,
     });
   }
 
   function handleShowBanner(): void {
+
+    const randomIntent = Object.values(Intent)[Math.floor(Math.random() * Object.values(Intent).length)];
+
     showBanner({
       title: "Hello World",
       description:
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-      intent: Intent.INFO,
+      intent: randomIntent,
       placement: BannerPlacement.TOP,
     });
   }

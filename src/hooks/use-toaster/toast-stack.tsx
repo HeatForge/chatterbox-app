@@ -27,6 +27,7 @@ type ToastCardProps = {
 function ToastCard({ toast, depth, onDismiss }: ToastCardProps) {
   const dismissable = toast.dismissable ?? true;
   const icon = toast.icon ?? intentDefaultIcon(toast.intent);
+  const enterFrom = toast.placement.startsWith("top") ? "top" : "bottom";
 
   useEffect(() => {
     if (toast.duration === undefined || toast.duration < 0) {
@@ -42,6 +43,7 @@ function ToastCard({ toast, depth, onDismiss }: ToastCardProps) {
       <div
         className={styles.toast}
         data-intent={toast.intent}
+        data-enter-from={enterFrom}
         aria-live="polite"
       >
         <Icon className={styles.icon} icon={icon} aria-hidden />
