@@ -7,8 +7,18 @@ import { useEffect, useRef, useState } from "react";
 import { ChatInput } from "../lib/chat-input/ChatInput";
 import { ChatInputState } from "../lib/chat-input/enums";
 import { AssistantMessageBlip, UserMessageBlip } from "../lib/message-blip";
+import {
+  Sidebar,
+  SidebarProvider,
+  SidebarToggle,
+  useSidebar,
+} from "../lib/sidebar";
+import sidebarStyles from "../lib/sidebar/sidebar.module.css";
 import styles from "./chat.module.css";
 import { initialThreads } from "./chat-data";
+import { Button } from "../lib/button/Button";
+import { Intent } from "@/lib/Intent";
+import { IconNames } from "@/lib/IconNames";
 
 const DEMO_THINKING = `The user is asking for food-focused weekend ideas in Portland.
 I should suggest a route that stays walkable and relaxed.
@@ -56,7 +66,25 @@ function delay(ms: number): Promise<void> {
   });
 }
 
-export default function ChatView() {
+function SidebarThreadPlaceholders() {
+  const { notifyItemSelected } = useSidebar();
+
+  return (
+    <>
+      {initialThreads.map((thread) => (
+        <Button 
+          key={thread.id}
+          text={thread.title}
+          leftIcon={IconNames["chat-3-line"]}
+          style={{justifyContent: "flex-start"}}
+          onClick={() => notifyItemSelected()}
+        />
+      ))}
+    </>
+  );
+}
+
+function ChatViewContent() {
   const [messages, setMessages] = useState<UIMessage[]>(INITIAL_MESSAGES);
   const [thinkingById, setThinkingById] = useState<Record<string, string>>({
     m4: DEMO_THINKING,
@@ -128,33 +156,52 @@ export default function ChatView() {
   }
 
   return (
-    <main className={styles.chatView}>
-      <header className={styles.header}>This is the header of the chat</header>
+    <div className={styles.shell}>
+      <Sidebar>
+        <SidebarThreadPlaceholders />
+      </Sidebar>
 
-      <div ref={messageListRef} className={styles.messageList}>
-        {messages.map((message) => {
-          const content = getMessageText(message);
+      <main className={styles.chatView}>
+        <header className={styles.header}>
+          <SidebarToggle />
+          <span className={styles.headerTitle}>
+            This is the header of the chat
+          </span>
+        </header>
 
-          if (message.role === "user") {
-            return <UserMessageBlip key={message.id} content={content} />;
-          }
+        <div ref={messageListRef} className={styles.messageList}>
+          {messages.map((message) => {
+            const content = getMessageText(message);
 
-          return (
-            <AssistantMessageBlip
-              key={message.id}
-              content={content}
-              thinking={thinkingById[message.id]}
-            />
-          );
-        })}
-      </div>
+            if (message.role === "user") {
+              return <UserMessageBlip key={message.id} content={content} />;
+            }
 
-      <div className={styles.inputArea}>
-        <ChatInput
-          state={inputState}
-          onSubmit={(text) => void handleSubmit(text)}
-        />
-      </div>
-    </main>
+            return (
+              <AssistantMessageBlip
+                key={message.id}
+                content={content}
+                thinking={thinkingById[message.id]}
+              />
+            );
+          })}
+        </div>
+
+        <div className={styles.inputArea}>
+          <ChatInput
+            state={inputState}
+            onSubmit={(text) => void handleSubmit(text)}
+          />
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default function ChatView() {
+  return (
+    <SidebarProvider>
+      <ChatViewContent />
+    </SidebarProvider>
   );
 }
