@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
-import { errorResponse } from "@/lib/services/api-errors";
 import {
   getAiSettingsPayload,
   updateAiSettings,
 } from "@/lib/services/ai-providers";
+import { errorResponse } from "@/lib/services/api-errors";
 import { getRequiredUserId } from "@/lib/services/session";
 
 const settingsSchema = z.object({

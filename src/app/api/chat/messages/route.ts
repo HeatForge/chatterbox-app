@@ -13,9 +13,12 @@ export async function POST(request: Request) {
   try {
     const userId = await getRequiredUserId(request.headers);
     const body = messageSchema.parse(await request.json());
-    return NextResponse.json(await sendMessage(userId, { content: body.content }), {
-      status: 201,
-    });
+    return NextResponse.json(
+      await sendMessage(userId, { content: body.content }),
+      {
+        status: 201,
+      },
+    );
   } catch (error) {
     return errorResponse(error);
   }

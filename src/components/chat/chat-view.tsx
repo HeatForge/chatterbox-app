@@ -63,7 +63,9 @@ function SidebarThreads({
           key={thread.id}
           text={thread.title}
           leftIcon={IconNames["chat-3-line"]}
-          intent={thread.id === activeThreadId ? Intent.SECONDARY : Intent.PRIMARY}
+          intent={
+            thread.id === activeThreadId ? Intent.SECONDARY : Intent.PRIMARY
+          }
           style={{ justifyContent: "flex-start" }}
           onClick={() => {
             onSelectThread(thread.id);
@@ -171,6 +173,7 @@ function ChatViewContent() {
     }
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: load initial thread list once
   useEffect(() => {
     void loadThreads()
       .then((loadedThreads) => {
@@ -242,7 +245,9 @@ function ChatViewContent() {
       showToast({
         title: "Message failed",
         description:
-          error instanceof Error ? error.message : "Could not start generation.",
+          error instanceof Error
+            ? error.message
+            : "Could not start generation.",
         intent: Intent.DANGER,
         placement: ToastPlacement.BOTTOM_RIGHT,
       });

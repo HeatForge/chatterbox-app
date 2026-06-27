@@ -1,5 +1,3 @@
-import { auth } from "@/lib/auth";
-
 export class UnauthorizedError extends Error {
   constructor() {
     super("Unauthorized");
@@ -8,6 +6,7 @@ export class UnauthorizedError extends Error {
 }
 
 export async function getRequiredUserId(headers: Headers): Promise<string> {
+  const { auth } = await import("@/lib/auth");
   const session = await auth.api.getSession({ headers });
   const userId = session?.user?.id;
 

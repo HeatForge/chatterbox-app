@@ -1,9 +1,12 @@
-import { streamText, type ModelMessage } from "ai";
+import { type ModelMessage, streamText } from "ai";
 import { nanoid } from "nanoid";
 
-import { db, type ChatMessage, type ChatThread } from "@/lib/db";
+import { type ChatMessage, type ChatThread, db } from "@/lib/db";
+import {
+  getGenerationModel,
+  getPreferredModel,
+} from "@/lib/services/ai-providers";
 import { BadRequestError, NotFoundError } from "@/lib/services/api-errors";
-import { getGenerationModel, getPreferredModel } from "@/lib/services/ai-providers";
 
 type ThreadSummary = {
   id: string;
@@ -213,7 +216,8 @@ function startAssistantGeneration(
     await finishAssistantMessage(assistantMessageId, "completed");
   })()
     .catch(async (error: unknown) => {
-      const message = error instanceof Error ? error.message : "Generation failed";
+      const message =
+        error instanceof Error ? error.message : "Generation failed";
       await finishAssistantMessage(assistantMessageId, "error", message);
     })
     .finally(() => {
@@ -270,7 +274,8 @@ export async function sendMessage(
       await trx
         .updateTable("chat_threads")
         .set({
-          title: thread.title === "New chat" ? makeTitle(content) : thread.title,
+          title:
+            thread.title === "New chat" ? makeTitle(content) : thread.title,
           updated_at: new Date(),
         })
         .where("id", "=", thread.id)

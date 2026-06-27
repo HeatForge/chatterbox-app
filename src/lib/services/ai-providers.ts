@@ -1,11 +1,11 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
-import { createGoogle } from "@ai-sdk/google";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createMistral } from "@ai-sdk/mistral";
 import { createOpenAI } from "@ai-sdk/openai";
 import type { LanguageModel } from "ai";
 import { nanoid } from "nanoid";
 
-import { db, type AiProvider, type AiProviderModel } from "@/lib/db";
+import { type AiProvider, db } from "@/lib/db";
 import { BadRequestError, NotFoundError } from "@/lib/services/api-errors";
 
 export const DEFAULT_SYSTEM_PROMPT =
@@ -291,7 +291,11 @@ export async function listProviderSummaries(
 
   const models = await db
     .selectFrom("ai_provider_models")
-    .innerJoin("ai_providers", "ai_providers.id", "ai_provider_models.provider_id")
+    .innerJoin(
+      "ai_providers",
+      "ai_providers.id",
+      "ai_provider_models.provider_id",
+    )
     .select(["ai_provider_models.provider_id"])
     .where("ai_providers.user_id", "=", userId)
     .execute();
@@ -312,7 +316,11 @@ export async function listProviderSummaries(
 export async function listModelOptions(userId: string): Promise<ModelOption[]> {
   const rows = await db
     .selectFrom("ai_provider_models")
-    .innerJoin("ai_providers", "ai_providers.id", "ai_provider_models.provider_id")
+    .innerJoin(
+      "ai_providers",
+      "ai_providers.id",
+      "ai_provider_models.provider_id",
+    )
     .select([
       "ai_provider_models.provider_id",
       "ai_provider_models.model_id",
@@ -537,7 +545,7 @@ export async function getGenerationModel(
     case "anthropic":
       return createAnthropic({ apiKey: provider.api_key })(modelId);
     case "google":
-      return createGoogle({ apiKey: provider.api_key })(modelId);
+      return createGoogleGenerativeAI({ apiKey: provider.api_key })(modelId);
     case "mistral":
       return createMistral({ apiKey: provider.api_key })(modelId);
     default: {

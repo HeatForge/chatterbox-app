@@ -8,9 +8,8 @@ import { ToastPlacement } from "@/hooks/use-toaster/types";
 import { useToaster } from "@/hooks/use-toaster/use-toaster";
 import { IconNames } from "@/lib/IconNames";
 import { Intent } from "@/lib/Intent";
-
-import styles from "./settings.module.css";
 import { Select } from "../lib/select/Select";
+import styles from "./settings.module.css";
 
 type SettingsCategory = "providers" | "user";
 
@@ -100,6 +99,7 @@ export default function SettingsView() {
     );
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: load settings once on mount
   useEffect(() => {
     void loadSettings().catch(() => {
       showToast({
@@ -129,7 +129,8 @@ export default function SettingsView() {
     } catch (error) {
       showToast({
         title: "Action failed",
-        description: error instanceof Error ? error.message : "Please try again.",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
         intent: Intent.DANGER,
         placement: ToastPlacement.BOTTOM_RIGHT,
       });
@@ -279,7 +280,8 @@ export default function SettingsView() {
               <div className={styles.settingGroup}>
                 <span className={styles.settingLabel}>Add provider</span>
                 <p className={styles.settingHint}>
-                  Store your own API key, then refresh models from that provider.
+                  Store your own API key, then refresh models from that
+                  provider.
                 </p>
                 <div className={styles.formGrid}>
                   <Select
@@ -328,7 +330,9 @@ export default function SettingsView() {
                         <div>
                           <strong>{provider.displayName}</strong>
                           <p className={styles.settingHint}>
-                            {provider.modelCount} models cached
+                            {provider.modelCount}{" "}
+                            {provider.modelCount === 1 ? "model" : "models"}{" "}
+                            cached
                             {provider.baseUrl ? ` · ${provider.baseUrl}` : ""}
                           </p>
                         </div>
@@ -336,7 +340,9 @@ export default function SettingsView() {
                           <Button
                             text={provider.enabled ? "Enabled" : "Disabled"}
                             intent={
-                              provider.enabled ? Intent.SUCCESS : Intent.TERTIARY
+                              provider.enabled
+                                ? Intent.SUCCESS
+                                : Intent.TERTIARY
                             }
                             disabled={busyAction === `provider-${provider.id}`}
                             onClick={() =>
@@ -407,7 +413,9 @@ export default function SettingsView() {
                 <Button
                   text="Save prompt"
                   intent={Intent.PRIMARY}
-                  disabled={!systemPrompt.trim() || busyAction === "save-settings"}
+                  disabled={
+                    !systemPrompt.trim() || busyAction === "save-settings"
+                  }
                   onClick={() => void saveSettings()}
                 />
               </div>

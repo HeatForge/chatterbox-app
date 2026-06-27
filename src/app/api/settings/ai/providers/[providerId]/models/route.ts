@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-
-import { errorResponse } from "@/lib/services/api-errors";
 import { refreshProviderModels } from "@/lib/services/ai-providers";
+import { errorResponse } from "@/lib/services/api-errors";
 import { getRequiredUserId } from "@/lib/services/session";
 
 type RouteContext = {
