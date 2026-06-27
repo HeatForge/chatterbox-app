@@ -32,6 +32,8 @@ storage via MinIO/S3. Deployed via Docker on a personal VPS behind Nginx.
 5. Don't validate internal function calls (TS handles it)
 6. Server Components by default; `'use client'` only for interactive UI
 7. CSS Modules for component styles
+8. When creating features the PR's are to merge into the develop branch as that is automated to deploy to dev environment
+9. Don't touch main or stable branches. These are branches specifically for production deployment with stable releases.
 
 ## Commands
 - `npm dev` — Local dev
