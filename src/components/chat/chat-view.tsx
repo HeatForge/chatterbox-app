@@ -11,6 +11,7 @@ import { ToastPlacement } from "@/hooks/use-toaster/types";
 import { useToaster } from "@/hooks/use-toaster/use-toaster";
 import { Intent } from "@/lib/Intent";
 import { Button } from "../lib/button/Button";
+import { ChatInput, ChatInputState } from "../lib/chat-input/ChatInput";
 
 export default function ChatView() {
   const showToast = useToaster();
@@ -63,25 +64,31 @@ export default function ChatView() {
     });
   }
   return (
-    <main style={{ display: "flex", flexDirection: "row", gap: "1rem", alignItems: "center", justifyContent: "center" }}>
+    <main style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex : 1 }}>
         <Icon icon={IconNames["home-2-fill"]} />
         Hello World!
-        <Button
-          text="Toaster"
-          onClick={handleShowToast}
-          intent={Intent.INFO}
-          leftIcon={IconNames["information-line"]}
-        />
-        <Button
-          text="Banner"
-          onClick={handleShowBanner}
-          intent={Intent.WARNING}
-          rightIcon={IconNames["alert-line"]}
-        />
-        <Button
-          onClick={handleShowModal}
-          intent={Intent.DANGER}
-          leftIcon={IconNames["square-arrow-up-line"]}
+        <div style={{display : "flex"}}>
+          <Button
+            text="Toaster"
+            onClick={handleShowToast}
+            intent={Intent.INFO}
+            leftIcon={IconNames["information-line"]}
+          />
+          <Button
+            text="Banner"
+            onClick={handleShowBanner}
+            intent={Intent.WARNING}
+            rightIcon={IconNames["alert-line"]}
+          />
+          <Button
+            onClick={handleShowModal}
+            intent={Intent.DANGER}
+            leftIcon={IconNames["square-arrow-up-line"]}
+          />
+        </div>
+        <div style={{display : "flex", flex : 1, height : "100%"}} />
+        <ChatInput
+          onSubmit={() => {}}
         />
       </main>
   );
