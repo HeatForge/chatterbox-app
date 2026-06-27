@@ -9,7 +9,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const migrationsDir = path.join(__dirname, "..", "db", "migrations");
 
 async function migrate() {
-  const databaseUrl = process.env.DATABASE_URL;
+  const databaseUrl = process.env.NODE_ENV === "development" ? process.env.DEV_DATABASE_URL : process.env.DATABASE_URL;
   if (!databaseUrl) {
     console.error("DATABASE_URL environment variable is not set");
     process.exit(1);
