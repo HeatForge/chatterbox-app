@@ -5,6 +5,13 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.join(__dirname, "..");
 
+const DATABASE_URL_KEYS = [
+  "DATABASE_URL",
+  "POSTGRES_URL",
+  "DATABASE_POSTGRES_URL",
+  "DATABASE_POSTGRES_PRISMA_URL",
+];
+
 function parseEnvLine(line) {
   const trimmed = line.trim();
   if (!trimmed || trimmed.startsWith("#")) {
@@ -29,19 +36,45 @@ function parseEnvLine(line) {
   return { key, value };
 }
 
-export function loadEnvFiles(filenames = [".env", ".env.local"]) {
-  for (const filename of filenames) {
-    const filePath = path.join(projectRoot, filename);
-    if (!existsSync(filePath)) {
+function loadEnvFile(filePath, platformKeys) {
+  if (!existsSync(filePath)) {
+    return;
+  }
+
+  for (const line of readFileSync(filePath, "utf8").split("\n")) {
+    const parsed = parseEnvLine(line);
+    if (!parsed || platformKeys.has(parsed.key)) {
       continue;
     }
+    process.env[parsed.key] = parsed.value;
+  }
+}
 
-    for (const line of readFileSync(filePath, "utf8").split("\n")) {
-      const parsed = parseEnvLine(line);
-      if (!parsed || parsed.key in process.env) {
-        continue;
-      }
-      process.env[parsed.key] = parsed.value;
+/**
+ * Load .env files using Next.js precedence. Values already present in the
+ * shell or hosting platform (e.g. Vercel build env) are never overwritten.
+ */
+export function loadEnvFiles() {
+  const platformKeys = new Set(Object.keys(process.env));
+  const nodeEnv = process.env.NODE_ENV ?? "development";
+  const filenames = [
+    ".env",
+    ".env.local",
+    `.env.${nodeEnv}`,
+    `.env.${nodeEnv}.local`,
+  ];
+
+  for (const filename of filenames) {
+    loadEnvFile(path.join(projectRoot, filename), platformKeys);
+  }
+}
+
+export function resolveDatabaseUrl() {
+  for (const key of DATABASE_URL_KEYS) {
+    const value = process.env[key];
+    if (value) {
+      return value;
     }
   }
+  return null;
 }
