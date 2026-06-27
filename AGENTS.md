@@ -54,3 +54,21 @@ For detailed info on specific areas, see:
 - Don't put secrets in committed files
 - Don't write raw SQL except for vector operations and migrations
 - Don't add 'use client' unless you need interactivity
+
+## Cursor Cloud specific instructions
+
+This file's "Stack"/"Commands" sections are aspirational. The repo today is an early
+frontend-only Next.js 16 / React 19 scaffold (named `chatterbox-app`): no API routes,
+no DB, no auth, and no AI/storage wiring yet. The `pg`/`kysely`/`better-auth`/`@fal-ai`/
+`ai` packages are installed but unused, so no Postgres, MinIO, OpenRouter, fal.ai, env
+vars, or Docker services are needed to run or test the app.
+
+- Setup: `npm install` (npm lockfile; Node 22 works, `@types/node` pins 20).
+- Run (dev): `npm run dev` → http://localhost:3000. Main interactive page is `/chat`.
+- Build: `npm run build` (passes; also runs `tsc`/typecheck). Lint: `npm run lint` (Biome).
+- The actual scripts are only `dev`, `build`, `start`, `lint`, `format`, `icons:generate`.
+  Commands referenced above like `npm test`, `npm typecheck`, `npm check`, `npm db:migrate`,
+  and `npm test:e2e` do NOT exist yet — don't rely on them.
+- `npm run lint` currently exits non-zero due to pre-existing Biome formatting violations in
+  committed code (e.g. `src/lib/Intent.ts`, generated `src/lib/IconNames.ts`). This is a
+  code/style issue, not an environment problem.
