@@ -9,7 +9,7 @@
     "lint": "biome check",
     "format": "biome format --write",
     "icons:generate": "node scripts/generate-icon-names.mjs",
-    "db:migrate": "export $(grep -v '^#' .env | xargs) && NODE_ENV=development node scripts/migrate.mjs"
+    "db:migrate": "export $(grep -v '^#' .env | xargs) node scripts/migrate.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.74",
