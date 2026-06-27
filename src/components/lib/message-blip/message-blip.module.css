@@ -1,0 +1,223 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-width: 85%;
+}
+
+.root[data-align="left"] {
+  align-self: flex-start;
+}
+
+.root[data-align="right"] {
+  align-self: flex-end;
+}
+
+.bubble {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--surface-overlay-border);
+  border-radius: 1.25rem;
+  overflow: hidden;
+}
+
+.bubble[data-align="left"] {
+  background: var(--color-background-light);
+  border-bottom-left-radius: 0;
+}
+
+.bubble[data-align="right"] {
+  background: color-mix(
+    in srgb,
+    var(--color-primary) 14%,
+    var(--color-background-light)
+  );
+  border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  border-bottom-right-radius: 0;
+}
+
+.thinking {
+  border-bottom: 1px solid var(--surface-overlay-border);
+}
+
+.thinkingToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  border: none;
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.thinkingToggle:hover {
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
+.thinkingToggle:focus-visible {
+  outline: 2px solid var(--color-primary-light);
+  outline-offset: -2px;
+}
+
+.thinkingLabel {
+  flex: 1;
+  text-align: left;
+}
+
+.thinkingChevron {
+  flex-shrink: 0;
+}
+
+.thinkingBody {
+  padding: 0 0.875rem 0.75rem;
+}
+
+.thinkingMarkdown {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.bodyWrapper {
+  overflow: hidden;
+  transition: height 0.25s ease;
+}
+
+.bodyInner {
+  padding: 0.75rem 0.875rem;
+}
+
+.bodyInner[data-scrollable] {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-text) 24%, transparent)
+    transparent;
+}
+
+.bodyInner[data-scrollable]::-webkit-scrollbar {
+  width: 6px;
+}
+
+.bodyInner[data-scrollable]::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text) 24%, transparent);
+}
+
+.markdown {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown p {
+  margin: 0 0 0.75rem;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  margin: 1rem 0 0.5rem;
+  line-height: 1.3;
+}
+
+.markdown h1 {
+  font-size: 1.375rem;
+}
+
+.markdown h2 {
+  font-size: 1.25rem;
+}
+
+.markdown h3 {
+  font-size: 1.125rem;
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.markdown li + li {
+  margin-top: 0.25rem;
+}
+
+.markdown blockquote {
+  margin: 0 0 0.75rem;
+  padding-left: 0.875rem;
+  border-left: 3px solid
+    color-mix(in srgb, var(--color-primary) 45%, transparent);
+  color: var(--color-text-muted);
+}
+
+.markdown a {
+  color: var(--color-primary-light);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown a:hover {
+  color: var(--color-primary);
+}
+
+.markdown code {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.875em;
+  padding: 0.1em 0.35em;
+  border-radius: 0.25rem;
+  background: color-mix(in srgb, var(--color-text) 10%, transparent);
+}
+
+.markdown pre {
+  margin: 0 0 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--color-background-dark);
+  overflow-x: auto;
+}
+
+.markdown pre code {
+  padding: 0;
+  background: transparent;
+  font-size: 0.8125rem;
+}
+
+.markdown hr {
+  margin: 1rem 0;
+  border: none;
+  border-top: 1px solid var(--surface-overlay-border);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 0.25rem;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.root:hover .actions,
+.root:focus-within .actions {
+  opacity: 1;
+}
+
+.root[data-align="right"] .actions {
+  justify-content: flex-end;
+}

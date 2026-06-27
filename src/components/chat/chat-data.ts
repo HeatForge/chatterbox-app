@@ -39,6 +39,11 @@ export const initialThreads: ChatThread[] = [
         "assistant",
         "Try a food crawl through the Central Eastside: start with coffee at Coava, grab pastries nearby, then dinner at a spot with a tasting menu. End with dessert in the Pearl District.",
       ),
+      {
+        id: "m5",
+        role: "assistant",
+        parts: [{type: "text", text: "It's big brain time."}, {type: "reasoning", text: "I'm thinking about the user's request and I'm coming up with a plan."}]
+      }
     ],
   },
   {

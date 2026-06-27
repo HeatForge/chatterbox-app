@@ -1,95 +1,160 @@
 "use client";
 
-import { Icon } from "@iconify/react";
+import type { UIMessage } from "ai";
+import { nanoid } from "nanoid";
+import { useEffect, useRef, useState } from "react";
 
-import { IconNames } from "@/lib/IconNames";
-import "./chat.module.css";
-import { BannerPlacement } from "@/hooks/use-banner/types";
-import { useBanner } from "@/hooks/use-banner/use-banner";
-import { useModal } from "@/hooks/use-modal/use-modal";
-import { ToastPlacement } from "@/hooks/use-toaster/types";
-import { useToaster } from "@/hooks/use-toaster/use-toaster";
-import { Intent } from "@/lib/Intent";
-import { Button } from "../lib/button/Button";
-import { ChatInput, ChatInputState } from "../lib/chat-input/ChatInput";
+import { ChatInput } from "../lib/chat-input/ChatInput";
+import { ChatInputState } from "../lib/chat-input/enums";
+import { AssistantMessageBlip, UserMessageBlip } from "../lib/message-blip";
+import styles from "./chat.module.css";
+import { initialThreads } from "./chat-data";
+
+const DEMO_THINKING = `The user is asking for food-focused weekend ideas in Portland.
+I should suggest a route that stays walkable and relaxed.
+Central Eastside has good density of coffee, pastries, and dinner spots.`;
+
+const INITIAL_MESSAGES: UIMessage[] = [
+  ...initialThreads[0].messages.slice(0, 3),
+  ...initialThreads[1].messages,
+];
+
+function createTextMessage(
+  role: UIMessage["role"],
+  text: string,
+  id = nanoid(),
+): UIMessage {
+  return {
+    id,
+    role,
+    parts: [{ type: "text", text }],
+  };
+}
+
+function getMessageText(message: UIMessage): string {
+  return message.parts
+    .filter(
+      (part): part is { type: "text"; text: string } => part.type === "text",
+    )
+    .map((part) => part.text)
+    .join("\n");
+}
+
+function buildDemoResponse(userText: string): {
+  thinking: string;
+  content: string;
+} {
+  return {
+    thinking: `The user said: "${userText}"\nI should reply with a helpful markdown example.`,
+    content: `You wrote:\n\n> ${userText}\n\nHere's a demo reply with **markdown**:\n\n- Bullet one\n- Bullet two\n\n\`\`\`ts\nconsole.log("streaming works");\n\`\`\``,
+  };
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
 
 export default function ChatView() {
-  const showToast = useToaster();
-  const showBanner = useBanner();
-  const showModal = useModal();
+  const [messages, setMessages] = useState<UIMessage[]>(INITIAL_MESSAGES);
+  const [thinkingById, setThinkingById] = useState<Record<string, string>>({
+    m4: DEMO_THINKING,
+  });
+  const [inputState, setInputState] = useState(ChatInputState.READY);
+  const messageListRef = useRef<HTMLDivElement>(null);
+  const streamAbortRef = useRef(false);
 
-  function handleShowToast(): void {
-    const randomIntent = Object.values(Intent)[Math.floor(Math.random() * Object.values(Intent).length)];
+  useEffect(() => {
+    return () => {
+      streamAbortRef.current = true;
+    };
+  }, []);
 
-    showToast({
-      title: "Hello World",
-      description:
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-      intent: randomIntent,
-      placement: ToastPlacement.BOTTOM_RIGHT,
-    });
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll when messages update
+  useEffect(() => {
+    const list = messageListRef.current;
+    if (!list) {
+      return;
+    }
+
+    list.scrollTop = list.scrollHeight;
+  }, [messages]);
+
+  async function handleSubmit(text: string): Promise<void> {
+    const trimmed = text.trim();
+    if (!trimmed || inputState !== ChatInputState.READY) {
+      return;
+    }
+
+    setMessages((current) => [...current, createTextMessage("user", trimmed)]);
+    setInputState(ChatInputState.WAITING);
+    await delay(500);
+
+    if (streamAbortRef.current) {
+      return;
+    }
+
+    const assistantId = nanoid();
+    const { thinking, content } = buildDemoResponse(trimmed);
+
+    setThinkingById((current) => ({ ...current, [assistantId]: thinking }));
+    setMessages((current) => [
+      ...current,
+      createTextMessage("assistant", "", assistantId),
+    ]);
+    setInputState(ChatInputState.STREAMING);
+
+    const chunkSize = 4;
+    for (let index = 0; index <= content.length; index += chunkSize) {
+      if (streamAbortRef.current) {
+        return;
+      }
+
+      const slice = content.slice(0, index);
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === assistantId
+            ? createTextMessage("assistant", slice, assistantId)
+            : message,
+        ),
+      );
+      await delay(30);
+    }
+
+    if (!streamAbortRef.current) {
+      setInputState(ChatInputState.READY);
+    }
   }
 
-  function handleShowBanner(): void {
-
-    const randomIntent = Object.values(Intent)[Math.floor(Math.random() * Object.values(Intent).length)];
-
-    showBanner({
-      title: "Hello World",
-      description:
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-      intent: randomIntent,
-      placement: BannerPlacement.TOP,
-    });
-  }
-
-  function handleShowModal(): void {
-    showModal({
-      contents: (dismiss) => (
-        <>
-          <h1>Hello World</h1>
-          <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-            eiusmod tempor incididunt ut labore et dolore magna aliqua.
-          </p>
-          <Button 
-            text="Dismiss"
-            leftIcon={IconNames["close-line"]}
-            onClick={dismiss}
-            intent={Intent.DANGER}
-            iconSize={32}
-          />
-        </>
-      ),
-    });
-  }
   return (
-    <main style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flex : 1 }}>
-        <Icon icon={IconNames["home-2-fill"]} />
-        Hello World!
-        <div style={{display : "flex"}}>
-          <Button
-            text="Toaster"
-            onClick={handleShowToast}
-            intent={Intent.INFO}
-            leftIcon={IconNames["information-line"]}
-          />
-          <Button
-            text="Banner"
-            onClick={handleShowBanner}
-            intent={Intent.WARNING}
-            rightIcon={IconNames["alert-line"]}
-          />
-          <Button
-            onClick={handleShowModal}
-            intent={Intent.DANGER}
-            leftIcon={IconNames["square-arrow-up-line"]}
-          />
-        </div>
-        <div style={{display : "flex", flex : 1, height : "100%"}} />
+    <main className={styles.chatView}>
+      <header className={styles.header}>This is the header of the chat</header>
+
+      <div ref={messageListRef} className={styles.messageList}>
+        {messages.map((message) => {
+          const content = getMessageText(message);
+
+          if (message.role === "user") {
+            return <UserMessageBlip key={message.id} content={content} />;
+          }
+
+          return (
+            <AssistantMessageBlip
+              key={message.id}
+              content={content}
+              thinking={thinkingById[message.id]}
+            />
+          );
+        })}
+      </div>
+
+      <div className={styles.inputArea}>
         <ChatInput
-          onSubmit={() => {}}
+          state={inputState}
+          onSubmit={(text) => void handleSubmit(text)}
         />
-      </main>
+      </div>
+    </main>
   );
 }
