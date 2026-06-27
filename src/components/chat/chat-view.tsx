@@ -72,11 +72,11 @@ function SidebarThreadPlaceholders() {
   return (
     <>
       {initialThreads.map((thread) => (
-        <Button 
+        <Button
           key={thread.id}
           text={thread.title}
           leftIcon={IconNames["chat-3-line"]}
-          style={{justifyContent: "flex-start"}}
+          style={{ justifyContent: "flex-start" }}
           onClick={() => notifyItemSelected()}
         />
       ))}

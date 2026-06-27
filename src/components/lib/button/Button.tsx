@@ -10,7 +10,10 @@ import styles from "./button.module.css";
 
 export type ButtonIcon = string | IconifyIcon;
 
-export type ButtonProps = Omit<ComponentPropsWithoutRef<"button">, "children"> & {
+export type ButtonProps = Omit<
+  ComponentPropsWithoutRef<"button">,
+  "children"
+> & {
   text?: string;
   leftIcon?: ButtonIcon;
   rightIcon?: ButtonIcon;
