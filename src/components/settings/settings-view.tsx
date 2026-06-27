@@ -1,43 +1,244 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/lib/button/Button";
+import { ToastPlacement } from "@/hooks/use-toaster/types";
+import { useToaster } from "@/hooks/use-toaster/use-toaster";
 import { IconNames } from "@/lib/IconNames";
 import { Intent } from "@/lib/Intent";
-
-import styles from "./settings.module.css";
 import { Select } from "../lib/select/Select";
+import styles from "./settings.module.css";
 
 type SettingsCategory = "providers" | "user";
-
-const CHAT_MODELS = [
-  { value: "gpt-4o", label: "GPT-4o" },
-  { value: "claude-3.5-sonnet", label: "Claude 3.5 Sonnet" },
-  { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
-  { value: "llama-3.1-70b", label: "Llama 3.1 70B" },
-  { value: "mistral-large", label: "Mistral Large" },
-  { value: "deepseek-chat", label: "DeepSeek Chat" },
-] as const;
-
-const DEFAULT_SYSTEM_PROMPT = `You are a helpful AI assistant. Be concise, accurate, and friendly in your responses.
-
-When answering questions:
-- Prefer clear explanations over jargon
-- Ask clarifying questions when the request is ambiguous
-- Admit uncertainty rather than guessing`;
 
 const CATEGORIES: { id: SettingsCategory; label: string }[] = [
   { id: "providers", label: "Providers" },
   { id: "user", label: "User" },
 ];
 
+type ProviderCatalogItem = {
+  key: string;
+  label: string;
+  baseUrl?: string;
+  apiKeyUrl?: string;
+  openAiCompatible?: boolean;
+};
+
+type ProviderSummary = {
+  id: string;
+  providerKey: string;
+  displayName: string;
+  enabled: boolean;
+  baseUrl: string | null;
+  hasApiKey: boolean;
+  modelCount: number;
+};
+
+type ModelOption = {
+  providerId: string;
+  providerName: string;
+  providerKey: string;
+  modelId: string;
+  label: string;
+};
+
+type SettingsPayload = {
+  catalog: ProviderCatalogItem[];
+  settings: {
+    systemPrompt: string;
+    preferredProviderId: string | null;
+    preferredModelId: string | null;
+  };
+  providers: ProviderSummary[];
+  models: ModelOption[];
+};
+
+function getModelValue(model: Pick<ModelOption, "providerId" | "modelId">) {
+  return `${model.providerId}:${model.modelId}`;
+}
+
+function parseModelValue(value: string) {
+  const [providerId, ...modelParts] = value.split(":");
+  return {
+    providerId: providerId || null,
+    modelId: modelParts.join(":") || null,
+  };
+}
+
 export default function SettingsView() {
   const router = useRouter();
+  const showToast = useToaster();
   const [category, setCategory] = useState<SettingsCategory>("providers");
-  const [chatModel, setChatModel] = useState<string>(CHAT_MODELS[0].value);
-  const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SYSTEM_PROMPT);
+  const [payload, setPayload] = useState<SettingsPayload | null>(null);
+  const [providerKey, setProviderKey] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
+  const [selectedModel, setSelectedModel] = useState("");
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [busyAction, setBusyAction] = useState<string | null>(null);
+
+  async function loadSettings(): Promise<void> {
+    const response = await fetch("/api/settings/ai");
+    if (!response.ok) {
+      throw new Error("Failed to load AI settings");
+    }
+
+    const data = (await response.json()) as SettingsPayload;
+    setPayload(data);
+    setProviderKey(data.catalog[0]?.key ?? "");
+    setSystemPrompt(data.settings.systemPrompt);
+    setSelectedModel(
+      data.settings.preferredProviderId && data.settings.preferredModelId
+        ? getModelValue({
+            providerId: data.settings.preferredProviderId,
+            modelId: data.settings.preferredModelId,
+          })
+        : "",
+    );
+  }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: load settings once on mount
+  useEffect(() => {
+    void loadSettings().catch(() => {
+      showToast({
+        title: "Settings unavailable",
+        description: "Could not load AI provider settings.",
+        intent: Intent.DANGER,
+        placement: ToastPlacement.BOTTOM_RIGHT,
+      });
+    });
+  }, [showToast]);
+
+  const modelOptions = useMemo(() => {
+    if (!payload) {
+      return [];
+    }
+
+    return payload.models.map((model) => ({
+      value: getModelValue(model),
+      label: `${model.label} (${model.providerName})`,
+    }));
+  }, [payload]);
+
+  async function runAction(action: string, task: () => Promise<void>) {
+    setBusyAction(action);
+    try {
+      await task();
+    } catch (error) {
+      showToast({
+        title: "Action failed",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+        intent: Intent.DANGER,
+        placement: ToastPlacement.BOTTOM_RIGHT,
+      });
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function addProvider(): Promise<void> {
+    await runAction("add-provider", async () => {
+      const response = await fetch("/api/settings/ai/providers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          providerKey,
+          apiKey,
+          baseUrl: baseUrl.trim() || null,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Provider could not be added");
+      }
+
+      setApiKey("");
+      setBaseUrl("");
+      await loadSettings();
+    });
+  }
+
+  async function updateProvider(
+    providerId: string,
+    body: Partial<Pick<ProviderSummary, "enabled">>,
+  ): Promise<void> {
+    await runAction(`provider-${providerId}`, async () => {
+      const response = await fetch(`/api/settings/ai/providers/${providerId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        throw new Error("Provider could not be updated");
+      }
+
+      await loadSettings();
+    });
+  }
+
+  async function refreshModels(providerId: string): Promise<void> {
+    await runAction(`models-${providerId}`, async () => {
+      const response = await fetch(
+        `/api/settings/ai/providers/${providerId}/models`,
+        { method: "POST" },
+      );
+
+      if (!response.ok) {
+        throw new Error("Model list could not be refreshed");
+      }
+
+      await loadSettings();
+    });
+  }
+
+  async function deleteProvider(providerId: string): Promise<void> {
+    await runAction(`delete-${providerId}`, async () => {
+      const response = await fetch(`/api/settings/ai/providers/${providerId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Provider could not be deleted");
+      }
+
+      await loadSettings();
+    });
+  }
+
+  async function saveSettings(): Promise<void> {
+    await runAction("save-settings", async () => {
+      const model = parseModelValue(selectedModel);
+      const response = await fetch("/api/settings/ai", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemPrompt,
+          preferredProviderId: model.providerId,
+          preferredModelId: model.modelId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Settings could not be saved");
+      }
+
+      await loadSettings();
+      showToast({
+        title: "Settings saved",
+        description: "Your default chat model and system prompt were updated.",
+        intent: Intent.SUCCESS,
+        placement: ToastPlacement.BOTTOM_RIGHT,
+      });
+    });
+  }
+
+  if (!payload) {
+    return <div className={styles.loading}>Loading settings…</div>;
+  }
 
   return (
     <div className={styles.shell}>
@@ -77,16 +278,95 @@ export default function SettingsView() {
               <h1 className={styles.sectionTitle}>Providers</h1>
 
               <div className={styles.settingGroup}>
-                <span className={styles.settingLabel}>Provider list</span>
+                <span className={styles.settingLabel}>Add provider</span>
                 <p className={styles.settingHint}>
-                  Configure API providers for chat and other features.
+                  Store your own API key, then refresh models from that
+                  provider.
                 </p>
-                <div className={styles.providerList}>
+                <div className={styles.formGrid}>
+                  <Select
+                    options={payload.catalog.map((item) => ({
+                      value: item.key,
+                      label: item.label,
+                    }))}
+                    value={providerKey}
+                    onChange={setProviderKey}
+                  />
+                  <input
+                    className={styles.input}
+                    type="password"
+                    value={apiKey}
+                    placeholder="Provider API key"
+                    onChange={(event) => setApiKey(event.target.value)}
+                  />
+                  <input
+                    className={styles.input}
+                    type="url"
+                    value={baseUrl}
+                    placeholder="Custom base URL (optional)"
+                    onChange={(event) => setBaseUrl(event.target.value)}
+                  />
                   <Button
                     text="Add provider"
                     leftIcon={IconNames["add-line"]}
                     intent={Intent.SECONDARY}
+                    disabled={!apiKey.trim() || busyAction === "add-provider"}
+                    onClick={() => void addProvider()}
                   />
+                </div>
+              </div>
+
+              <div className={styles.settingGroup}>
+                <span className={styles.settingLabel}>Provider list</span>
+                <p className={styles.settingHint}>
+                  Enabled providers populate the chat model dropdown.
+                </p>
+                <div className={styles.providerList}>
+                  {payload.providers.length === 0 ? (
+                    <p className={styles.emptyState}>No providers added yet.</p>
+                  ) : (
+                    payload.providers.map((provider) => (
+                      <div className={styles.providerCard} key={provider.id}>
+                        <div>
+                          <strong>{provider.displayName}</strong>
+                          <p className={styles.settingHint}>
+                            {provider.modelCount}{" "}
+                            {provider.modelCount === 1 ? "model" : "models"}{" "}
+                            cached
+                            {provider.baseUrl ? ` · ${provider.baseUrl}` : ""}
+                          </p>
+                        </div>
+                        <div className={styles.providerActions}>
+                          <Button
+                            text={provider.enabled ? "Enabled" : "Disabled"}
+                            intent={
+                              provider.enabled
+                                ? Intent.SUCCESS
+                                : Intent.TERTIARY
+                            }
+                            disabled={busyAction === `provider-${provider.id}`}
+                            onClick={() =>
+                              void updateProvider(provider.id, {
+                                enabled: !provider.enabled,
+                              })
+                            }
+                          />
+                          <Button
+                            text="Refresh models"
+                            intent={Intent.SECONDARY}
+                            disabled={busyAction === `models-${provider.id}`}
+                            onClick={() => void refreshModels(provider.id)}
+                          />
+                          <Button
+                            text="Remove"
+                            intent={Intent.DANGER}
+                            disabled={busyAction === `delete-${provider.id}`}
+                            onClick={() => void deleteProvider(provider.id)}
+                          />
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -97,7 +377,20 @@ export default function SettingsView() {
                 <p className={styles.settingHint}>
                   Select the default model used for new conversations.
                 </p>
-                <Select options={CHAT_MODELS.map(model => ({value: model.value, label: model.label}))} value={chatModel} onChange={setChatModel} />
+                <Select
+                  id="chat-model"
+                  options={modelOptions}
+                  value={selectedModel}
+                  onChange={setSelectedModel}
+                  searchable
+                  emptyMessage="Refresh an enabled provider to load models."
+                />
+                <Button
+                  text="Save model"
+                  intent={Intent.PRIMARY}
+                  disabled={!selectedModel || busyAction === "save-settings"}
+                  onClick={() => void saveSettings()}
+                />
               </div>
             </>
           ) : (
@@ -116,6 +409,14 @@ export default function SettingsView() {
                   className={styles.textarea}
                   value={systemPrompt}
                   onChange={(event) => setSystemPrompt(event.target.value)}
+                />
+                <Button
+                  text="Save prompt"
+                  intent={Intent.PRIMARY}
+                  disabled={
+                    !systemPrompt.trim() || busyAction === "save-settings"
+                  }
+                  onClick={() => void saveSettings()}
                 />
               </div>
             </>

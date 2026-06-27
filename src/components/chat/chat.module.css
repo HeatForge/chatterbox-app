@@ -34,6 +34,13 @@
   font-size: 0.9375rem;
   font-weight: 600;
 }
+
+.sidebarFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .messageList {
   display: flex;
   flex-direction: column;
@@ -45,6 +52,15 @@
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--color-text) 24%, transparent)
     transparent;
+}
+
+.emptyChat {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  min-height: 18rem;
+  color: var(--color-text-muted);
+  text-align: center;
 }
 
 .messageList::-webkit-scrollbar {
