@@ -1,17 +1,8 @@
 import { Pool } from "pg";
 
-let pool: Pool | undefined;
+import { getDatabaseUrl } from "@/lib/env/database-url";
 
-function getDatabaseUrl(): string {
-  const url =
-    process.env.NODE_ENV === "development"
-      ? process.env.DEV_DATABASE_URL
-      : process.env.DATABASE_URL;
-  if (!url) {
-    throw new Error("DATABASE_URL environment variable is not set");
-  }
-  return url;
-}
+let pool: Pool | undefined;
 
 export function getPool(): Pool {
   if (!pool) {
