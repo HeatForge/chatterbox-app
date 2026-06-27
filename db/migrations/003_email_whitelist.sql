@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS email_whitelist (
+  email TEXT PRIMARY KEY,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
