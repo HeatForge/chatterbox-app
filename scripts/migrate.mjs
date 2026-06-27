@@ -3,15 +3,21 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
 
+import { loadEnvFiles, resolveDatabaseUrl } from "./load-env.mjs";
+
 const { Client } = pg;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const migrationsDir = path.join(__dirname, "..", "db", "migrations");
 
 async function migrate() {
-  const databaseUrl = process.env.DATABASE_URL;
+  loadEnvFiles();
+
+  const databaseUrl = resolveDatabaseUrl();
   if (!databaseUrl) {
-    console.error("DATABASE_URL environment variable is not set");
+    console.error(
+      "Database URL not found. Set DATABASE_URL (or POSTGRES_URL / DATABASE_POSTGRES_URL from Neon).",
+    );
     process.exit(1);
   }
 

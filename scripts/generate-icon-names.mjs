@@ -5,14 +5,17 @@ import mingcute from "@iconify-json/mingcute/icons.json" with { type: "json" };
 
 const prefix = mingcute.prefix;
 const shortNames = [
-	...Object.keys(mingcute.icons),
-	...Object.keys(mingcute.aliases ?? {}),
+  ...Object.keys(mingcute.icons),
+  ...Object.keys(mingcute.aliases ?? {}),
 ].sort();
 
 const unionMembers = shortNames.map((name) => JSON.stringify(name)).join(" | ");
 const objectEntries = shortNames
-	.map((name) => `\t${JSON.stringify(name)}: ${JSON.stringify(`${prefix}:${name}`)},`)
-	.join("\n");
+  .map(
+    (name) =>
+      `\t${JSON.stringify(name)}: ${JSON.stringify(`${prefix}:${name}`)},`,
+  )
+  .join("\n");
 
 const output = `/** Auto-generated from @iconify-json/mingcute. Run \`npm run icons:generate\` to refresh. */
 

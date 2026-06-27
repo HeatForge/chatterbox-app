@@ -42,8 +42,14 @@ export const initialThreads: ChatThread[] = [
       {
         id: "m5",
         role: "assistant",
-        parts: [{type: "text", text: "It's big brain time."}, {type: "reasoning", text: "I'm thinking about the user's request and I'm coming up with a plan."}]
-      }
+        parts: [
+          { type: "text", text: "It's big brain time." },
+          {
+            type: "reasoning",
+            text: "I'm thinking about the user's request and I'm coming up with a plan.",
+          },
+        ],
+      },
     ],
   },
   {

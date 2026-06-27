@@ -1,17 +1,17 @@
 import { Suspense } from "react";
 
 import { AuthQueryBanners } from "@/components/auth/auth-query-banners";
-import { SignInForm } from "@/components/auth/sign-in-form";
+import { SignUpForm } from "@/components/auth/sign-up-form";
 
-import styles from "./page.module.css";
+import styles from "./signup.module.css";
 
-export default function HomePage() {
+export default function SignUpPage() {
   return (
     <div className={styles.page}>
       <Suspense fallback={null}>
         <AuthQueryBanners />
       </Suspense>
-      <SignInForm />
+      <SignUpForm />
     </div>
   );
 }
