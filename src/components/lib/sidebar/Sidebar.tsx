@@ -13,6 +13,7 @@ import { useSidebarResize } from "./useSidebarResize";
 
 type SidebarProps = {
   children: ReactNode;
+  footer?: ReactNode;
   title?: string;
 };
 
@@ -31,7 +32,7 @@ function SidebarLockButton() {
   );
 }
 
-export function Sidebar({ children, title = "Threads" }: SidebarProps) {
+export function Sidebar({ children, footer, title = "Threads" }: SidebarProps) {
   const { open, width, isMobile, setWidth } = useSidebar();
   const resizeEnabled = open && !isMobile;
 
@@ -55,6 +56,7 @@ export function Sidebar({ children, title = "Threads" }: SidebarProps) {
           <SidebarLockButton />
         </header>
         <div className={styles.content}>{children}</div>
+        {footer ? <footer className={styles.footer}>{footer}</footer> : null}
       </div>
       {resizeEnabled ? (
         <button

@@ -2,8 +2,11 @@
 
 import type { UIMessage } from "ai";
 import { nanoid } from "nanoid";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-
+import { IconNames } from "@/lib/IconNames";
+import { Intent } from "@/lib/Intent";
+import { Button } from "../lib/button/Button";
 import { ChatInput } from "../lib/chat-input/ChatInput";
 import { ChatInputState } from "../lib/chat-input/enums";
 import { AssistantMessageBlip, UserMessageBlip } from "../lib/message-blip";
@@ -13,12 +16,8 @@ import {
   SidebarToggle,
   useSidebar,
 } from "../lib/sidebar";
-import sidebarStyles from "../lib/sidebar/sidebar.module.css";
 import styles from "./chat.module.css";
 import { initialThreads } from "./chat-data";
-import { Button } from "../lib/button/Button";
-import { Intent } from "@/lib/Intent";
-import { IconNames } from "@/lib/IconNames";
 
 const DEMO_THINKING = `The user is asking for food-focused weekend ideas in Portland.
 I should suggest a route that stays walkable and relaxed.
@@ -85,6 +84,7 @@ function SidebarThreadPlaceholders() {
 }
 
 function ChatViewContent() {
+  const router = useRouter();
   const [messages, setMessages] = useState<UIMessage[]>(INITIAL_MESSAGES);
   const [thinkingById, setThinkingById] = useState<Record<string, string>>({
     m4: DEMO_THINKING,
@@ -157,7 +157,17 @@ function ChatViewContent() {
 
   return (
     <div className={styles.shell}>
-      <Sidebar>
+      <Sidebar
+        footer={
+          <Button
+            text="Settings"
+            leftIcon={IconNames["settings-3-line"]}
+            intent={Intent.TERTIARY}
+            style={{ justifyContent: "flex-start" }}
+            onClick={() => router.push("/settings")}
+          />
+        }
+      >
         <SidebarThreadPlaceholders />
       </Sidebar>
 
