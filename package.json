@@ -12,6 +12,9 @@
     "db:migrate": "node scripts/migrate.mjs"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.0",
+    "@ai-sdk/google": "^4.0.1",
+    "@ai-sdk/mistral": "^4.0.0",
     "@ai-sdk/openai": "^3.0.74",
     "@fal-ai/client": "^1.10.1",
     "@fal-ai/server-proxy": "^1.2.1",

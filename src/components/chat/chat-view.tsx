@@ -1,9 +1,9 @@
 "use client";
 
-import type { UIMessage } from "ai";
-import { nanoid } from "nanoid";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { ToastPlacement } from "@/hooks/use-toaster/types";
+import { useToaster } from "@/hooks/use-toaster/use-toaster";
 import { IconNames } from "@/lib/IconNames";
 import { Intent } from "@/lib/Intent";
 import { Button } from "../lib/button/Button";
@@ -17,66 +17,58 @@ import {
   useSidebar,
 } from "../lib/sidebar";
 import styles from "./chat.module.css";
-import { initialThreads } from "./chat-data";
 
-const DEMO_THINKING = `The user is asking for food-focused weekend ideas in Portland.
-I should suggest a route that stays walkable and relaxed.
-Central Eastside has good density of coffee, pastries, and dinner spots.`;
+type ThreadSummary = {
+  id: string;
+  title: string;
+  modelId: string;
+};
 
-const INITIAL_MESSAGES: UIMessage[] = [
-  ...initialThreads[0].messages.slice(0, 3),
-  ...initialThreads[1].messages,
-];
-
-function createTextMessage(
-  role: UIMessage["role"],
-  text: string,
-  id = nanoid(),
-): UIMessage {
-  return {
-    id,
-    role,
-    parts: [{ type: "text", text }],
-  };
-}
-
-function getMessageText(message: UIMessage): string {
-  return message.parts
-    .filter(
-      (part): part is { type: "text"; text: string } => part.type === "text",
-    )
-    .map((part) => part.text)
-    .join("\n");
-}
-
-function buildDemoResponse(userText: string): {
-  thinking: string;
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
   content: string;
-} {
-  return {
-    thinking: `The user said: "${userText}"\nI should reply with a helpful markdown example.`,
-    content: `You wrote:\n\n> ${userText}\n\nHere's a demo reply with **markdown**:\n\n- Bullet one\n- Bullet two\n\n\`\`\`ts\nconsole.log("streaming works");\n\`\`\``,
-  };
-}
+  status: "completed" | "streaming" | "error";
+  error: string | null;
+  createdAt: string;
+};
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}
+type ThreadPayload = ThreadSummary & {
+  providerId: string | null;
+  systemPrompt: string;
+  messages: ChatMessage[];
+};
 
-function SidebarThreadPlaceholders() {
+type SendMessageResponse = {
+  threadId: string;
+  userMessage: ChatMessage;
+  assistantMessage: ChatMessage;
+};
+
+function SidebarThreads({
+  threads,
+  activeThreadId,
+  onSelectThread,
+}: {
+  threads: ThreadSummary[];
+  activeThreadId: string | null;
+  onSelectThread: (threadId: string) => void;
+}) {
   const { notifyItemSelected } = useSidebar();
 
   return (
     <>
-      {initialThreads.map((thread) => (
+      {threads.map((thread) => (
         <Button
           key={thread.id}
           text={thread.title}
           leftIcon={IconNames["chat-3-line"]}
+          intent={thread.id === activeThreadId ? Intent.SECONDARY : Intent.PRIMARY}
           style={{ justifyContent: "flex-start" }}
-          onClick={() => notifyItemSelected()}
+          onClick={() => {
+            onSelectThread(thread.id);
+            notifyItemSelected();
+          }}
         />
       ))}
     </>
@@ -85,17 +77,19 @@ function SidebarThreadPlaceholders() {
 
 function ChatViewContent() {
   const router = useRouter();
-  const [messages, setMessages] = useState<UIMessage[]>(INITIAL_MESSAGES);
-  const [thinkingById, setThinkingById] = useState<Record<string, string>>({
-    m4: DEMO_THINKING,
-  });
+  const showToast = useToaster();
+  const [threads, setThreads] = useState<ThreadSummary[]>([]);
+  const [activeThread, setActiveThread] = useState<ThreadPayload | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputState, setInputState] = useState(ChatInputState.READY);
   const messageListRef = useRef<HTMLDivElement>(null);
-  const streamAbortRef = useRef(false);
+  const streamsRef = useRef<Map<string, EventSource>>(new Map());
 
   useEffect(() => {
     return () => {
-      streamAbortRef.current = true;
+      for (const stream of streamsRef.current.values()) {
+        stream.close();
+      }
     };
   }, []);
 
@@ -109,92 +103,222 @@ function ChatViewContent() {
     list.scrollTop = list.scrollHeight;
   }, [messages]);
 
+  async function loadThreads(): Promise<ThreadSummary[]> {
+    const response = await fetch("/api/chat/threads");
+    if (!response.ok) {
+      throw new Error("Failed to load threads");
+    }
+
+    const nextThreads = (await response.json()) as ThreadSummary[];
+    setThreads(nextThreads);
+    return nextThreads;
+  }
+
+  function connectAssistantStream(threadId: string, messageId: string): void {
+    if (streamsRef.current.has(messageId)) {
+      return;
+    }
+
+    const stream = new EventSource(
+      `/api/chat/threads/${threadId}/messages/${messageId}/stream`,
+    );
+    streamsRef.current.set(messageId, stream);
+
+    stream.addEventListener("content", (event) => {
+      const message = JSON.parse((event as MessageEvent).data) as ChatMessage;
+      setMessages((current) =>
+        current.map((item) => (item.id === message.id ? message : item)),
+      );
+    });
+
+    function finish(event: Event): void {
+      const message = JSON.parse((event as MessageEvent).data) as ChatMessage;
+      setMessages((current) =>
+        current.map((item) => (item.id === message.id ? message : item)),
+      );
+      stream.close();
+      streamsRef.current.delete(messageId);
+      setInputState(ChatInputState.READY);
+    }
+
+    stream.addEventListener("done", finish);
+    stream.addEventListener("error", (event) => {
+      if ("data" in event && typeof event.data === "string") {
+        finish(event);
+      } else {
+        stream.close();
+        streamsRef.current.delete(messageId);
+        setInputState(ChatInputState.ERROR);
+      }
+    });
+  }
+
+  async function loadThread(threadId: string): Promise<void> {
+    const response = await fetch(`/api/chat/threads/${threadId}`);
+    if (!response.ok) {
+      throw new Error("Failed to load thread");
+    }
+
+    const thread = (await response.json()) as ThreadPayload;
+    setActiveThread(thread);
+    setMessages(thread.messages);
+
+    for (const message of thread.messages) {
+      if (message.role === "assistant" && message.status === "streaming") {
+        setInputState(ChatInputState.STREAMING);
+        connectAssistantStream(thread.id, message.id);
+      }
+    }
+  }
+
+  useEffect(() => {
+    void loadThreads()
+      .then((loadedThreads) => {
+        if (loadedThreads[0]) {
+          return loadThread(loadedThreads[0].id);
+        }
+      })
+      .catch(() => {
+        showToast({
+          title: "Chat unavailable",
+          description: "Could not load your chat threads.",
+          intent: Intent.DANGER,
+          placement: ToastPlacement.BOTTOM_RIGHT,
+        });
+      });
+  }, [showToast]);
+
   async function handleSubmit(text: string): Promise<void> {
     const trimmed = text.trim();
     if (!trimmed || inputState !== ChatInputState.READY) {
       return;
     }
 
-    setMessages((current) => [...current, createTextMessage("user", trimmed)]);
     setInputState(ChatInputState.WAITING);
-    await delay(500);
 
-    if (streamAbortRef.current) {
-      return;
-    }
+    try {
+      const endpoint = activeThread
+        ? `/api/chat/threads/${activeThread.id}/messages`
+        : "/api/chat/messages";
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: trimmed }),
+      });
 
-    const assistantId = nanoid();
-    const { thinking, content } = buildDemoResponse(trimmed);
-
-    setThinkingById((current) => ({ ...current, [assistantId]: thinking }));
-    setMessages((current) => [
-      ...current,
-      createTextMessage("assistant", "", assistantId),
-    ]);
-    setInputState(ChatInputState.STREAMING);
-
-    const chunkSize = 4;
-    for (let index = 0; index <= content.length; index += chunkSize) {
-      if (streamAbortRef.current) {
-        return;
+      if (!response.ok) {
+        const body = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(body?.error ?? "Message could not be sent");
       }
 
-      const slice = content.slice(0, index);
-      setMessages((current) =>
-        current.map((message) =>
-          message.id === assistantId
-            ? createTextMessage("assistant", slice, assistantId)
-            : message,
-        ),
-      );
-      await delay(30);
-    }
+      const result = (await response.json()) as SendMessageResponse;
+      setMessages((current) => [
+        ...current,
+        result.userMessage,
+        result.assistantMessage,
+      ]);
 
-    if (!streamAbortRef.current) {
-      setInputState(ChatInputState.READY);
+      const loadedThreads = await loadThreads();
+      const currentThread =
+        activeThread?.id === result.threadId
+          ? activeThread
+          : ({
+              id: result.threadId,
+              title:
+                loadedThreads.find((thread) => thread.id === result.threadId)
+                  ?.title ?? "New chat",
+              modelId: "",
+              providerId: null,
+              systemPrompt: "",
+              messages: [],
+            } satisfies ThreadPayload);
+      setActiveThread(currentThread);
+      setInputState(ChatInputState.STREAMING);
+      connectAssistantStream(result.threadId, result.assistantMessage.id);
+    } catch (error) {
+      setInputState(ChatInputState.ERROR);
+      showToast({
+        title: "Message failed",
+        description:
+          error instanceof Error ? error.message : "Could not start generation.",
+        intent: Intent.DANGER,
+        placement: ToastPlacement.BOTTOM_RIGHT,
+      });
     }
+  }
+
+  async function startNewChat(): Promise<void> {
+    setActiveThread(null);
+    setMessages([]);
+    setInputState(ChatInputState.READY);
   }
 
   return (
     <div className={styles.shell}>
       <Sidebar
         footer={
-          <Button
-            text="Settings"
-            leftIcon={IconNames["settings-3-line"]}
-            intent={Intent.TERTIARY}
-            style={{ justifyContent: "flex-start" }}
-            onClick={() => router.push("/settings")}
-          />
+          <div className={styles.sidebarFooter}>
+            <Button
+              text="New chat"
+              leftIcon={IconNames["add-line"]}
+              intent={Intent.SECONDARY}
+              style={{ justifyContent: "flex-start" }}
+              onClick={() => void startNewChat()}
+            />
+            <Button
+              text="Settings"
+              leftIcon={IconNames["settings-3-line"]}
+              intent={Intent.TERTIARY}
+              style={{ justifyContent: "flex-start" }}
+              onClick={() => router.push("/settings")}
+            />
+          </div>
         }
       >
-        <SidebarThreadPlaceholders />
+        <SidebarThreads
+          threads={threads}
+          activeThreadId={activeThread?.id ?? null}
+          onSelectThread={(threadId) => void loadThread(threadId)}
+        />
       </Sidebar>
 
       <main className={styles.chatView}>
         <header className={styles.header}>
           <SidebarToggle />
           <span className={styles.headerTitle}>
-            This is the header of the chat
+            {activeThread
+              ? `${activeThread.title} · ${activeThread.modelId}`
+              : "New chat"}
           </span>
         </header>
 
         <div ref={messageListRef} className={styles.messageList}>
-          {messages.map((message) => {
-            const content = getMessageText(message);
+          {messages.length === 0 ? (
+            <div className={styles.emptyChat}>
+              Add providers in Settings, choose a model, then start a chat.
+            </div>
+          ) : (
+            messages.map((message) => {
+              if (message.role === "user") {
+                return (
+                  <UserMessageBlip key={message.id} content={message.content} />
+                );
+              }
 
-            if (message.role === "user") {
-              return <UserMessageBlip key={message.id} content={content} />;
-            }
-
-            return (
-              <AssistantMessageBlip
-                key={message.id}
-                content={content}
-                thinking={thinkingById[message.id]}
-              />
-            );
-          })}
+              return (
+                <AssistantMessageBlip
+                  key={message.id}
+                  content={
+                    message.status === "error"
+                      ? (message.error ?? "Generation failed")
+                      : message.content
+                  }
+                />
+              );
+            })
+          )}
         </div>
 
         <div className={styles.inputArea}>

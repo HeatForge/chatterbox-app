@@ -5,6 +5,13 @@
   overflow: hidden;
 }
 
+.loading {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  color: var(--color-text-muted);
+}
+
 .categorySidebar {
   display: flex;
   flex-shrink: 0;
@@ -120,9 +127,16 @@
   background: var(--color-background-light);
 }
 
+.formGrid {
+  display: grid;
+  grid-template-columns: minmax(10rem, 14rem) minmax(14rem, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.input,
 .select {
   width: 100%;
-  max-width: 24rem;
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--surface-overlay-border);
   border-radius: 0.5rem;
@@ -133,9 +147,45 @@
   cursor: pointer;
 }
 
+.input {
+  cursor: text;
+}
+
+.formGrid .input:nth-of-type(2) {
+  grid-column: 1 / -1;
+}
+
 .select:focus-visible {
   outline: 2px solid var(--color-primary-light);
   outline-offset: 2px;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--color-primary-light);
+  outline-offset: 2px;
+}
+
+.providerCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem;
+  border: 1px solid var(--surface-overlay-border);
+  border-radius: 0.5rem;
+  background: var(--color-background);
+}
+
+.providerActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.emptyState {
+  margin: 0;
+  color: var(--color-text-muted);
 }
 
 .textarea {
