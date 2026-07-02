@@ -5,119 +5,22 @@ import { createOpenAI } from "@ai-sdk/openai";
 import type { LanguageModel } from "ai";
 import { nanoid } from "nanoid";
 
+import {
+  PROVIDER_CATALOG,
+  type ProviderCatalogItem,
+  type ProviderKey,
+} from "@/lib/ai/provider-catalog";
 import { type AiProvider, db } from "@/lib/db";
 import { BadRequestError, NotFoundError } from "@/lib/services/api-errors";
 
+export {
+  PROVIDER_CATALOG,
+  type ProviderKey,
+  providerKeys,
+} from "@/lib/ai/provider-catalog";
+
 export const DEFAULT_SYSTEM_PROMPT =
   "You are a helpful AI assistant. Be concise, accurate, and friendly in your responses.";
-
-export const providerKeys = [
-  "openai",
-  "google",
-  "anthropic",
-  "openrouter",
-  "mistral",
-  "groq",
-  "xai",
-  "deepseek",
-  "perplexity",
-  "together",
-  "cerebras",
-] as const;
-
-export type ProviderKey = (typeof providerKeys)[number];
-
-type ProviderCatalogItem = {
-  key: ProviderKey;
-  label: string;
-  baseUrl?: string;
-  modelEndpoint?: string;
-  apiKeyUrl?: string;
-  openAiCompatible?: boolean;
-};
-
-export const PROVIDER_CATALOG: ProviderCatalogItem[] = [
-  {
-    key: "openai",
-    label: "OpenAI",
-    modelEndpoint: "https://api.openai.com/v1/models",
-    apiKeyUrl: "https://platform.openai.com/api-keys",
-  },
-  {
-    key: "google",
-    label: "Google Gemini",
-    modelEndpoint: "https://generativelanguage.googleapis.com/v1beta/models",
-    apiKeyUrl: "https://aistudio.google.com/app/apikey",
-  },
-  {
-    key: "anthropic",
-    label: "Anthropic",
-    modelEndpoint: "https://api.anthropic.com/v1/models",
-    apiKeyUrl: "https://console.anthropic.com/settings/keys",
-  },
-  {
-    key: "openrouter",
-    label: "OpenRouter",
-    baseUrl: "https://openrouter.ai/api/v1",
-    modelEndpoint: "https://openrouter.ai/api/v1/models",
-    apiKeyUrl: "https://openrouter.ai/settings/keys",
-    openAiCompatible: true,
-  },
-  {
-    key: "mistral",
-    label: "Mistral",
-    modelEndpoint: "https://api.mistral.ai/v1/models",
-    apiKeyUrl: "https://console.mistral.ai/api-keys",
-  },
-  {
-    key: "groq",
-    label: "Groq",
-    baseUrl: "https://api.groq.com/openai/v1",
-    modelEndpoint: "https://api.groq.com/openai/v1/models",
-    apiKeyUrl: "https://console.groq.com/keys",
-    openAiCompatible: true,
-  },
-  {
-    key: "xai",
-    label: "xAI",
-    baseUrl: "https://api.x.ai/v1",
-    modelEndpoint: "https://api.x.ai/v1/models",
-    apiKeyUrl: "https://console.x.ai",
-    openAiCompatible: true,
-  },
-  {
-    key: "deepseek",
-    label: "DeepSeek",
-    baseUrl: "https://api.deepseek.com",
-    modelEndpoint: "https://api.deepseek.com/models",
-    apiKeyUrl: "https://platform.deepseek.com/api_keys",
-    openAiCompatible: true,
-  },
-  {
-    key: "perplexity",
-    label: "Perplexity",
-    baseUrl: "https://api.perplexity.ai",
-    modelEndpoint: "https://api.perplexity.ai/models",
-    apiKeyUrl: "https://www.perplexity.ai/settings/api",
-    openAiCompatible: true,
-  },
-  {
-    key: "together",
-    label: "Together AI",
-    baseUrl: "https://api.together.xyz/v1",
-    modelEndpoint: "https://api.together.xyz/v1/models",
-    apiKeyUrl: "https://api.together.xyz/settings/api-keys",
-    openAiCompatible: true,
-  },
-  {
-    key: "cerebras",
-    label: "Cerebras",
-    baseUrl: "https://api.cerebras.ai/v1",
-    modelEndpoint: "https://api.cerebras.ai/v1/models",
-    apiKeyUrl: "https://cloud.cerebras.ai/platform",
-    openAiCompatible: true,
-  },
-];
 
 export type ProviderSummary = {
   id: string;
@@ -289,24 +192,24 @@ export async function listProviderSummaries(
     .orderBy("created_at", "asc")
     .execute();
 
-  const models = await db
+  const modelCounts = await db
     .selectFrom("ai_provider_models")
     .innerJoin(
       "ai_providers",
       "ai_providers.id",
       "ai_provider_models.provider_id",
     )
-    .select(["ai_provider_models.provider_id"])
+    .select([
+      "ai_provider_models.provider_id",
+      db.fn.count("ai_provider_models.model_id").as("model_count"),
+    ])
     .where("ai_providers.user_id", "=", userId)
+    .groupBy("ai_provider_models.provider_id")
     .execute();
 
-  const modelCountByProvider = new Map<string, number>();
-  for (const model of models) {
-    modelCountByProvider.set(
-      model.provider_id,
-      (modelCountByProvider.get(model.provider_id) ?? 0) + 1,
-    );
-  }
+  const modelCountByProvider = new Map(
+    modelCounts.map((row) => [row.provider_id, Number(row.model_count)]),
+  );
 
   return providers.map((provider) =>
     summarizeProvider(provider, modelCountByProvider),
@@ -343,7 +246,19 @@ export async function listModelOptions(userId: string): Promise<ModelOption[]> {
   }));
 }
 
-export async function getAiSettingsPayload(userId: string) {
+export type AiSettingsConfig = {
+  settings: {
+    systemPrompt: string;
+    preferredProviderId: string | null;
+    preferredModelId: string | null;
+  };
+  providers: ProviderSummary[];
+  models: ModelOption[];
+};
+
+export async function getAiSettingsConfig(
+  userId: string,
+): Promise<AiSettingsConfig> {
   const [settings, providers, models] = await Promise.all([
     getUserSettings(userId),
     listProviderSummaries(userId),
@@ -351,7 +266,6 @@ export async function getAiSettingsPayload(userId: string) {
   ]);
 
   return {
-    catalog: PROVIDER_CATALOG,
     settings: {
       systemPrompt: settings.system_prompt,
       preferredProviderId: settings.preferred_provider_id,
@@ -359,6 +273,15 @@ export async function getAiSettingsPayload(userId: string) {
     },
     providers,
     models,
+  };
+}
+
+/** @deprecated Use getAiSettingsConfig — catalog is static on the client. */
+export async function getAiSettingsPayload(userId: string) {
+  const config = await getAiSettingsConfig(userId);
+  return {
+    catalog: PROVIDER_CATALOG,
+    ...config,
   };
 }
 
@@ -403,7 +326,7 @@ export async function updateAiSettings(
     .where("user_id", "=", userId)
     .execute();
 
-  return getAiSettingsPayload(userId);
+  return getAiSettingsConfig(userId);
 }
 
 export async function addProvider(

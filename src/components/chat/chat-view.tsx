@@ -56,6 +56,14 @@ function createOptimisticUserMessage(content: string): ChatMessage {
   };
 }
 
+function toThreadSummary(thread: ThreadPayload): ThreadSummary {
+  return {
+    id: thread.id,
+    title: thread.title,
+    modelId: thread.modelId,
+  };
+}
+
 function SidebarThreads({
   threads,
   activeThreadId,
@@ -77,6 +85,7 @@ function SidebarThreads({
           intent={
             thread.id === activeThreadId ? Intent.SECONDARY : Intent.PRIMARY
           }
+          minimal
           style={{ justifyContent: "flex-start" }}
           onClick={() => {
             onSelectThread(thread.id);
@@ -98,6 +107,7 @@ function ChatViewContent() {
   const [inputState, setInputState] = useState(ChatInputState.READY);
   const messageListRef = useRef<HTMLDivElement>(null);
   const streamsRef = useRef<Map<string, EventSource>>(new Map());
+  const threadCacheRef = useRef<Map<string, ThreadPayload>>(new Map());
 
   useEffect(() => {
     return () => {
@@ -116,6 +126,60 @@ function ChatViewContent() {
 
     list.scrollTop = list.scrollHeight;
   }, [messages]);
+
+  useEffect(() => {
+    if (!activeThread) {
+      return;
+    }
+
+    threadCacheRef.current.set(activeThread.id, {
+      ...activeThread,
+      messages,
+    });
+  }, [activeThread, messages]);
+
+  function cacheThread(thread: ThreadPayload): void {
+    threadCacheRef.current.set(thread.id, thread);
+  }
+
+  function applyThread(thread: ThreadPayload): void {
+    setActiveThread(thread);
+    setMessages(thread.messages);
+
+    let hasStreamingMessage = false;
+    for (const message of thread.messages) {
+      if (message.role === "assistant" && message.status === "streaming") {
+        hasStreamingMessage = true;
+        setInputState(ChatInputState.STREAMING);
+        connectAssistantStream(thread.id, message.id);
+      }
+    }
+
+    if (!hasStreamingMessage) {
+      setInputState(ChatInputState.READY);
+    }
+  }
+
+  async function loadAllThreads(): Promise<void> {
+    const response = await fetch("/api/chat/threads?full=true");
+    if (!response.ok) {
+      throw new Error("Failed to load threads");
+    }
+
+    const payloads = (await response.json()) as ThreadPayload[];
+    const cache = new Map<string, ThreadPayload>();
+
+    for (const thread of payloads) {
+      cache.set(thread.id, thread);
+    }
+
+    threadCacheRef.current = cache;
+    setThreads(payloads.map(toThreadSummary));
+
+    if (payloads[0]) {
+      applyThread(payloads[0]);
+    }
+  }
 
   async function loadThreads(): Promise<ThreadSummary[]> {
     const response = await fetch("/api/chat/threads");
@@ -168,45 +232,36 @@ function ChatViewContent() {
   }
 
   async function loadThread(threadId: string): Promise<void> {
+    const cached = threadCacheRef.current.get(threadId);
+    if (cached) {
+      applyThread(cached);
+      return;
+    }
+
     const response = await fetch(`/api/chat/threads/${threadId}`);
     if (!response.ok) {
       throw new Error("Failed to load thread");
     }
 
     const thread = (await response.json()) as ThreadPayload;
-    setActiveThread(thread);
-    setMessages(thread.messages);
+    cacheThread(thread);
+    applyThread(thread);
+  }
 
-    let hasStreamingMessage = false;
-    for (const message of thread.messages) {
-      if (message.role === "assistant" && message.status === "streaming") {
-        hasStreamingMessage = true;
-        setInputState(ChatInputState.STREAMING);
-        connectAssistantStream(thread.id, message.id);
-      }
-    }
-
-    if (!hasStreamingMessage) {
-      setInputState(ChatInputState.READY);
-    }
+  function selectThread(threadId: string): void {
+    void loadThread(threadId);
   }
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: load initial thread list once
   useEffect(() => {
-    void loadThreads()
-      .then((loadedThreads) => {
-        if (loadedThreads[0]) {
-          return loadThread(loadedThreads[0].id);
-        }
-      })
-      .catch(() => {
-        showToast({
-          title: "Chat unavailable",
-          description: "Could not load your chat threads.",
-          intent: Intent.DANGER,
-          placement: ToastPlacement.BOTTOM_RIGHT,
-        });
+    void loadAllThreads().catch(() => {
+      showToast({
+        title: "Chat unavailable",
+        description: "Could not load your chat threads.",
+        intent: Intent.DANGER,
+        placement: ToastPlacement.BOTTOM_RIGHT,
       });
+    });
   }, [showToast]);
 
   async function handleSubmit(text: string): Promise<void> {
@@ -237,15 +292,18 @@ function ChatViewContent() {
       }
 
       const result = (await response.json()) as SendMessageResponse;
+      let updatedMessages: ChatMessage[] = [];
+
       setMessages((current) => {
         const withoutOptimisticMessage = current.filter(
           (message) => message.id !== optimisticUserMessage.id,
         );
-        return [
+        updatedMessages = [
           ...withoutOptimisticMessage,
           result.userMessage,
           result.assistantMessage,
         ];
+        return updatedMessages;
       });
 
       const loadedThreads = await loadThreads();
@@ -263,7 +321,16 @@ function ChatViewContent() {
               systemPrompt: "",
               messages: [],
             } satisfies ThreadPayload);
-      setActiveThread(currentThread);
+
+      const updatedThread: ThreadPayload = {
+        ...currentThread,
+        title: createdThread?.title ?? currentThread.title,
+        modelId: createdThread?.modelId ?? currentThread.modelId,
+        messages: updatedMessages,
+      };
+
+      setActiveThread(updatedThread);
+      cacheThread(updatedThread);
       setInputState(ChatInputState.STREAMING);
       connectAssistantStream(result.threadId, result.assistantMessage.id);
     } catch (error) {
@@ -320,7 +387,7 @@ function ChatViewContent() {
         <SidebarThreads
           threads={threads}
           activeThreadId={activeThread?.id ?? null}
-          onSelectThread={(threadId) => void loadThread(threadId)}
+          onSelectThread={selectThread}
         />
       </Sidebar>
 
