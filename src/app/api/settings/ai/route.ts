@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  getAiSettingsPayload,
+  getAiSettingsConfig,
   updateAiSettings,
 } from "@/lib/services/ai-providers";
 import { errorResponse } from "@/lib/services/api-errors";
@@ -16,7 +16,7 @@ const settingsSchema = z.object({
 export async function GET(request: Request) {
   try {
     const userId = await getRequiredUserId(request.headers);
-    return NextResponse.json(await getAiSettingsPayload(userId));
+    return NextResponse.json(await getAiSettingsConfig(userId));
   } catch (error) {
     return errorResponse(error);
   }

@@ -132,6 +132,42 @@ export async function createThread(
   };
 }
 
+export async function listThreadPayloads(
+  userId: string,
+): Promise<ChatThreadPayload[]> {
+  const threads = await db
+    .selectFrom("chat_threads")
+    .selectAll()
+    .where("user_id", "=", userId)
+    .orderBy("updated_at", "desc")
+    .execute();
+
+  if (threads.length === 0) {
+    return [];
+  }
+
+  const threadIds = threads.map((thread) => thread.id);
+  const messages = await db
+    .selectFrom("chat_messages")
+    .selectAll()
+    .where("thread_id", "in", threadIds)
+    .orderBy("created_at", "asc")
+    .execute();
+
+  const messagesByThread = new Map<string, ChatMessage[]>();
+  for (const message of messages) {
+    const threadMessages = messagesByThread.get(message.thread_id) ?? [];
+    threadMessages.push(message);
+    messagesByThread.set(message.thread_id, threadMessages);
+  }
+
+  return threads.map((thread) => ({
+    ...toThreadSummary(thread),
+    systemPrompt: thread.system_prompt,
+    messages: (messagesByThread.get(thread.id) ?? []).map(toMessageDto),
+  }));
+}
+
 export async function getThreadPayload(
   userId: string,
   threadId: string,

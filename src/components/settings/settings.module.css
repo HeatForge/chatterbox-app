@@ -190,6 +190,12 @@
   color: var(--color-text-muted);
 }
 
+.sectionLoading {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
 .textarea {
   width: 100%;
   min-height: 12rem;

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/lib/button/Button";
 import { ToastPlacement } from "@/hooks/use-toaster/types";
 import { useToaster } from "@/hooks/use-toaster/use-toaster";
+import { PROVIDER_CATALOG } from "@/lib/ai/provider-catalog";
 import { IconNames } from "@/lib/IconNames";
 import { Intent } from "@/lib/Intent";
 import { Select } from "../lib/select/Select";
@@ -17,14 +18,6 @@ const CATEGORIES: { id: SettingsCategory; label: string }[] = [
   { id: "providers", label: "Providers" },
   { id: "user", label: "User" },
 ];
-
-type ProviderCatalogItem = {
-  key: string;
-  label: string;
-  baseUrl?: string;
-  apiKeyUrl?: string;
-  openAiCompatible?: boolean;
-};
 
 type ProviderSummary = {
   id: string;
@@ -44,8 +37,7 @@ type ModelOption = {
   label: string;
 };
 
-type SettingsPayload = {
-  catalog: ProviderCatalogItem[];
+type AiSettingsConfig = {
   settings: {
     systemPrompt: string;
     preferredProviderId: string | null;
@@ -71,8 +63,11 @@ export default function SettingsView() {
   const router = useRouter();
   const showToast = useToaster();
   const [category, setCategory] = useState<SettingsCategory>("providers");
-  const [payload, setPayload] = useState<SettingsPayload | null>(null);
-  const [providerKey, setProviderKey] = useState("");
+  const [config, setConfig] = useState<AiSettingsConfig | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
+  const [providerKey, setProviderKey] = useState<string>(
+    PROVIDER_CATALOG[0]?.key ?? "",
+  );
   const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
@@ -85,9 +80,8 @@ export default function SettingsView() {
       throw new Error("Failed to load AI settings");
     }
 
-    const data = (await response.json()) as SettingsPayload;
-    setPayload(data);
-    setProviderKey(data.catalog[0]?.key ?? "");
+    const data = (await response.json()) as AiSettingsConfig;
+    setConfig(data);
     setSystemPrompt(data.settings.systemPrompt);
     setSelectedModel(
       data.settings.preferredProviderId && data.settings.preferredModelId
@@ -101,26 +95,30 @@ export default function SettingsView() {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: load settings once on mount
   useEffect(() => {
-    void loadSettings().catch(() => {
-      showToast({
-        title: "Settings unavailable",
-        description: "Could not load AI provider settings.",
-        intent: Intent.DANGER,
-        placement: ToastPlacement.BOTTOM_RIGHT,
+    void loadSettings()
+      .catch(() => {
+        showToast({
+          title: "Settings unavailable",
+          description: "Could not load AI provider settings.",
+          intent: Intent.DANGER,
+          placement: ToastPlacement.BOTTOM_RIGHT,
+        });
+      })
+      .finally(() => {
+        setConfigLoading(false);
       });
-    });
   }, [showToast]);
 
   const modelOptions = useMemo(() => {
-    if (!payload) {
+    if (!config) {
       return [];
     }
 
-    return payload.models.map((model) => ({
+    return config.models.map((model) => ({
       value: getModelValue(model),
       label: `${model.label} (${model.providerName})`,
     }));
-  }, [payload]);
+  }, [config]);
 
   async function runAction(action: string, task: () => Promise<void>) {
     setBusyAction(action);
@@ -236,10 +234,6 @@ export default function SettingsView() {
     });
   }
 
-  if (!payload) {
-    return <div className={styles.loading}>Loading settings…</div>;
-  }
-
   return (
     <div className={styles.shell}>
       <nav className={styles.categorySidebar} aria-label="Settings categories">
@@ -285,7 +279,7 @@ export default function SettingsView() {
                 </p>
                 <div className={styles.formGrid}>
                   <Select
-                    options={payload.catalog.map((item) => ({
+                    options={PROVIDER_CATALOG.map((item) => ({
                       value: item.key,
                       label: item.label,
                     }))}
@@ -322,10 +316,12 @@ export default function SettingsView() {
                   Enabled providers populate the chat model dropdown.
                 </p>
                 <div className={styles.providerList}>
-                  {payload.providers.length === 0 ? (
+                  {configLoading ? (
+                    <p className={styles.sectionLoading}>Loading providers…</p>
+                  ) : config?.providers.length === 0 ? (
                     <p className={styles.emptyState}>No providers added yet.</p>
                   ) : (
-                    payload.providers.map((provider) => (
+                    config?.providers.map((provider) => (
                       <div className={styles.providerCard} key={provider.id}>
                         <div>
                           <strong>{provider.displayName}</strong>
@@ -377,18 +373,26 @@ export default function SettingsView() {
                 <p className={styles.settingHint}>
                   Select the default model used for new conversations.
                 </p>
-                <Select
-                  id="chat-model"
-                  options={modelOptions}
-                  value={selectedModel}
-                  onChange={setSelectedModel}
-                  searchable
-                  emptyMessage="Refresh an enabled provider to load models."
-                />
+                {configLoading ? (
+                  <p className={styles.sectionLoading}>Loading models…</p>
+                ) : (
+                  <Select
+                    id="chat-model"
+                    options={modelOptions}
+                    value={selectedModel}
+                    onChange={setSelectedModel}
+                    searchable
+                    emptyMessage="Refresh an enabled provider to load models."
+                  />
+                )}
                 <Button
                   text="Save model"
                   intent={Intent.PRIMARY}
-                  disabled={!selectedModel || busyAction === "save-settings"}
+                  disabled={
+                    configLoading ||
+                    !selectedModel ||
+                    busyAction === "save-settings"
+                  }
                   onClick={() => void saveSettings()}
                 />
               </div>
@@ -404,17 +408,23 @@ export default function SettingsView() {
                 <p className={styles.settingHint}>
                   Applied to new chats unless overridden per conversation.
                 </p>
-                <textarea
-                  id="system-prompt"
-                  className={styles.textarea}
-                  value={systemPrompt}
-                  onChange={(event) => setSystemPrompt(event.target.value)}
-                />
+                {configLoading ? (
+                  <p className={styles.sectionLoading}>Loading prompt…</p>
+                ) : (
+                  <textarea
+                    id="system-prompt"
+                    className={styles.textarea}
+                    value={systemPrompt}
+                    onChange={(event) => setSystemPrompt(event.target.value)}
+                  />
+                )}
                 <Button
                   text="Save prompt"
                   intent={Intent.PRIMARY}
                   disabled={
-                    !systemPrompt.trim() || busyAction === "save-settings"
+                    configLoading ||
+                    !systemPrompt.trim() ||
+                    busyAction === "save-settings"
                   }
                   onClick={() => void saveSettings()}
                 />
