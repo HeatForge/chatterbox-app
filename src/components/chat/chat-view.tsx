@@ -91,6 +91,7 @@ function SidebarThreads({
 function ChatViewContent() {
   const router = useRouter();
   const showToast = useToaster();
+  const { notifyItemSelected } = useSidebar();
   const [threads, setThreads] = useState<ThreadSummary[]>([]);
   const [activeThread, setActiveThread] = useState<ThreadPayload | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -176,11 +177,17 @@ function ChatViewContent() {
     setActiveThread(thread);
     setMessages(thread.messages);
 
+    let hasStreamingMessage = false;
     for (const message of thread.messages) {
       if (message.role === "assistant" && message.status === "streaming") {
+        hasStreamingMessage = true;
         setInputState(ChatInputState.STREAMING);
         connectAssistantStream(thread.id, message.id);
       }
+    }
+
+    if (!hasStreamingMessage) {
+      setInputState(ChatInputState.READY);
     }
   }
 
@@ -242,15 +249,16 @@ function ChatViewContent() {
       });
 
       const loadedThreads = await loadThreads();
+      const createdThread = loadedThreads.find(
+        (thread) => thread.id === result.threadId,
+      );
       const currentThread =
         activeThread?.id === result.threadId
           ? activeThread
           : ({
               id: result.threadId,
-              title:
-                loadedThreads.find((thread) => thread.id === result.threadId)
-                  ?.title ?? "New chat",
-              modelId: "",
+              title: createdThread?.title ?? "New chat",
+              modelId: createdThread?.modelId ?? "",
               providerId: null,
               systemPrompt: "",
               messages: [],
@@ -291,14 +299,20 @@ function ChatViewContent() {
               leftIcon={IconNames["add-line"]}
               intent={Intent.SECONDARY}
               style={{ justifyContent: "flex-start" }}
-              onClick={() => void startNewChat()}
+              onClick={() => {
+                notifyItemSelected();
+                void startNewChat();
+              }}
             />
             <Button
               text="Settings"
               leftIcon={IconNames["settings-3-line"]}
               intent={Intent.TERTIARY}
               style={{ justifyContent: "flex-start" }}
-              onClick={() => router.push("/settings")}
+              onClick={() => {
+                notifyItemSelected();
+                router.push("/settings");
+              }}
             />
           </div>
         }

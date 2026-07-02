@@ -3,6 +3,7 @@
   flex-direction: column;
   gap: 0.5rem;
   width: 100%;
+  min-width: 0;
 }
 
 .inputBox {
@@ -127,6 +128,7 @@
 
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.25rem;
   padding: 0 0.125rem;
@@ -164,6 +166,28 @@
 
 .toolbarIcon {
   flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .inputBox {
+    gap: 0.5rem;
+    padding: 0.5rem 0.5rem 0.5rem 0.75rem;
+    border-radius: 0.875rem;
+  }
+
+  .textarea {
+    font-size: 1rem;
+  }
+
+  .toolbar {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .toolbarButton {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
 }
 
 .loadingDots {

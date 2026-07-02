@@ -221,3 +221,13 @@
 .root[data-align="right"] .actions {
   justify-content: flex-end;
 }
+
+@media (max-width: 768px) {
+  .root {
+    max-width: 96%;
+  }
+
+  .bodyInner {
+    padding: 0.625rem 0.75rem;
+  }
+}
