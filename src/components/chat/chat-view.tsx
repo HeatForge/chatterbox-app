@@ -78,22 +78,20 @@ function SidebarThreads({
   return (
     <>
       {threads.map((thread) => (
-        <button
+        <Button
           key={thread.id}
-          type="button"
-          className={[
-            styles.threadItem,
-            thread.id === activeThreadId ? styles.threadItemActive : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
+          text={thread.title}
+          leftIcon={IconNames["chat-3-line"]}
+          intent={
+            thread.id === activeThreadId ? Intent.SECONDARY : Intent.PRIMARY
+          }
+          minimal
+          style={{ justifyContent: "flex-start" }}
           onClick={() => {
             onSelectThread(thread.id);
             notifyItemSelected();
           }}
-        >
-          {thread.title}
-        </button>
+        />
       ))}
     </>
   );
