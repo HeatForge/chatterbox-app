@@ -69,25 +69,28 @@ export function SidebarProvider({ children }: SidebarProviderProps) {
   const [open, setOpen] = useState(getInitialOpen);
   const [locked, setLocked] = useState(true);
   const [width, setWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+  const effectiveLocked = isMobile ? false : locked;
 
   const toggleOpen = useCallback(() => {
     setOpen((current) => !current);
   }, []);
 
   const toggleLocked = useCallback(() => {
-    setLocked((current) => !current);
-  }, []);
+    if (!isMobile) {
+      setLocked((current) => !current);
+    }
+  }, [isMobile]);
 
   const notifyItemSelected = useCallback(() => {
-    if (!locked) {
+    if (isMobile || !locked) {
       setOpen(false);
     }
-  }, [locked]);
+  }, [isMobile, locked]);
 
   const value = useMemo<SidebarContextValue>(
     () => ({
       open,
-      locked,
+      locked: effectiveLocked,
       width,
       isMobile,
       setOpen,
@@ -99,7 +102,7 @@ export function SidebarProvider({ children }: SidebarProviderProps) {
     }),
     [
       open,
-      locked,
+      effectiveLocked,
       width,
       isMobile,
       toggleOpen,

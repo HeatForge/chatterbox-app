@@ -18,7 +18,11 @@ type SidebarProps = {
 };
 
 function SidebarLockButton() {
-  const { locked, toggleLocked } = useSidebar();
+  const { locked, isMobile, toggleLocked } = useSidebar();
+
+  if (isMobile) {
+    return null;
+  }
 
   return (
     <Button
@@ -33,7 +37,7 @@ function SidebarLockButton() {
 }
 
 export function Sidebar({ children, footer, title = "Threads" }: SidebarProps) {
-  const { open, width, isMobile, setWidth } = useSidebar();
+  const { open, width, isMobile, setOpen, setWidth } = useSidebar();
   const resizeEnabled = open && !isMobile;
 
   const { onResizePointerDown } = useSidebarResize({
@@ -72,7 +76,12 @@ export function Sidebar({ children, footer, title = "Threads" }: SidebarProps) {
   if (isMobile && open) {
     return (
       <div className={styles.mobileOverlay}>
-        <div className={styles.backdrop} aria-hidden />
+        <button
+          type="button"
+          className={styles.backdrop}
+          aria-label="Close sidebar"
+          onClick={() => setOpen(false)}
+        />
         <div
           id={SIDEBAR_ID}
           className={[styles.sidebar, styles.mobile, styles.open].join(" ")}

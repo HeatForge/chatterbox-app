@@ -551,11 +551,14 @@ export async function getGenerationModel(
     default: {
       const catalogItem = getCatalogItem(provider.provider_key);
       const baseURL = provider.base_url || catalogItem.baseUrl;
-      return createOpenAI({
+      const openaiProvider = createOpenAI({
         apiKey: provider.api_key,
         baseURL,
         name: provider.provider_key,
-      })(modelId);
+      });
+      return catalogItem.openAiCompatible
+        ? openaiProvider.chat(modelId)
+        : openaiProvider(modelId);
     }
   }
 }

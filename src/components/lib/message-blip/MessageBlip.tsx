@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
 import { MarkdownContent } from "./MarkdownContent";
 import { MessageActions } from "./MessageActions";
@@ -28,37 +28,6 @@ export function MessageBlip({
   actions,
   className,
 }: MessageBlipProps) {
-  const innerRef = useRef<HTMLDivElement>(null);
-  const [wrapperHeight, setWrapperHeight] = useState<number | undefined>();
-  const [isScrollable, setIsScrollable] = useState(false);
-
-  useLayoutEffect(() => {
-    const element = innerRef.current;
-    if (!element) {
-      return;
-    }
-
-    function updateHeight(): void {
-      const naturalHeight = element?.scrollHeight ?? 0;
-
-      if (expandFull) {
-        setWrapperHeight(naturalHeight);
-        setIsScrollable(false);
-        return;
-      }
-
-      setWrapperHeight(Math.min(naturalHeight, maxHeight));
-      setIsScrollable(naturalHeight > maxHeight);
-    }
-
-    updateHeight();
-
-    const observer = new ResizeObserver(updateHeight);
-    observer.observe(element);
-
-    return () => observer.disconnect();
-  }, [expandFull, maxHeight]);
-
   const hasThinking = Boolean(thinking?.trim());
 
   return (
@@ -69,21 +38,11 @@ export function MessageBlip({
       <div className={styles.bubble} data-align={align}>
         {hasThinking ? <ThinkingSection thinking={thinking ?? ""} /> : null}
 
-        <div
-          className={styles.bodyWrapper}
-          style={
-            wrapperHeight === undefined ? undefined : { height: wrapperHeight }
-          }
-        >
+        <div className={styles.bodyWrapper}>
           <div
-            ref={innerRef}
             className={styles.bodyInner}
-            data-scrollable={isScrollable || undefined}
-            style={
-              isScrollable && !expandFull
-                ? { maxHeight, overflowY: "auto" }
-                : undefined
-            }
+            data-scrollable={!expandFull || undefined}
+            style={expandFull ? undefined : { maxHeight, overflowY: "auto" }}
           >
             <MarkdownContent content={content} />
           </div>

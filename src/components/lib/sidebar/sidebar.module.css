@@ -34,8 +34,11 @@
 .backdrop {
   position: absolute;
   inset: 0;
+  padding: 0;
+  border: none;
   background: #000;
   opacity: 0.45;
+  cursor: pointer;
 }
 
 .inner {
