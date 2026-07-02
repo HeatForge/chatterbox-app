@@ -45,6 +45,17 @@ type SendMessageResponse = {
   assistantMessage: ChatMessage;
 };
 
+function createOptimisticUserMessage(content: string): ChatMessage {
+  return {
+    id: `optimistic-${crypto.randomUUID()}`,
+    role: "user",
+    content,
+    status: "completed",
+    error: null,
+    createdAt: new Date().toISOString(),
+  };
+}
+
 function SidebarThreads({
   threads,
   activeThreadId,
@@ -198,6 +209,8 @@ function ChatViewContent() {
     }
 
     setInputState(ChatInputState.WAITING);
+    const optimisticUserMessage = createOptimisticUserMessage(trimmed);
+    setMessages((current) => [...current, optimisticUserMessage]);
 
     try {
       const endpoint = activeThread
@@ -217,11 +230,16 @@ function ChatViewContent() {
       }
 
       const result = (await response.json()) as SendMessageResponse;
-      setMessages((current) => [
-        ...current,
-        result.userMessage,
-        result.assistantMessage,
-      ]);
+      setMessages((current) => {
+        const withoutOptimisticMessage = current.filter(
+          (message) => message.id !== optimisticUserMessage.id,
+        );
+        return [
+          ...withoutOptimisticMessage,
+          result.userMessage,
+          result.assistantMessage,
+        ];
+      });
 
       const loadedThreads = await loadThreads();
       const currentThread =
@@ -241,6 +259,9 @@ function ChatViewContent() {
       setInputState(ChatInputState.STREAMING);
       connectAssistantStream(result.threadId, result.assistantMessage.id);
     } catch (error) {
+      setMessages((current) =>
+        current.filter((message) => message.id !== optimisticUserMessage.id),
+      );
       setInputState(ChatInputState.ERROR);
       showToast({
         title: "Message failed",

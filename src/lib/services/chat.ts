@@ -213,6 +213,9 @@ function startAssistantGeneration(
       await appendAssistantContent(assistantMessageId, content);
     }
 
+    if (content.length === 0) {
+      throw new Error("Model returned an empty response");
+    }
     await finishAssistantMessage(assistantMessageId, "completed");
   })()
     .catch(async (error: unknown) => {
