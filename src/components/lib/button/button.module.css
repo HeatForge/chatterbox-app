@@ -69,7 +69,7 @@
 
 .button[data-intent="tertiary"] {
   color: var(--color-text);
-  background: var(--color-tertiary);;
+  background: var(--color-tertiary);
 }
 
 .button[data-intent="tertiary"]:hover:not(:disabled) {
@@ -175,7 +175,6 @@
     var(--color-background-dark)
   );
 }
-
 
 .button[data-minimal] {
   background: transparent;

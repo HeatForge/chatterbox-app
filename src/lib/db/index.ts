@@ -1,7 +1,6 @@
 export { db } from "./client";
 export type {
   AiProvider,
-  AiProviderModel,
   AiProvidersTable,
   AiProviderUpdate,
   AiUserSettings,
@@ -18,7 +17,6 @@ export type {
   MessagesTable,
   MessageUpdate,
   NewAiProvider,
-  NewAiProviderModel,
   NewAiUserSettings,
   NewChatMessage,
   NewChatThread,
