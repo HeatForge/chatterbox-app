@@ -103,7 +103,6 @@ export async function listThreads(userId: string): Promise<ThreadSummary[]> {
     .where("user_id", "=", userId)
     .orderBy("updated_at", "desc")
     .execute();
-
   return threads.map(toThreadSummary);
 }
 

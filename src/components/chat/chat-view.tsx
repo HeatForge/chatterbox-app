@@ -56,14 +56,6 @@ function createOptimisticUserMessage(content: string): ChatMessage {
   };
 }
 
-function toThreadSummary(thread: ThreadPayload): ThreadSummary {
-  return {
-    id: thread.id,
-    title: thread.title,
-    modelId: thread.modelId,
-  };
-}
-
 function SidebarThreads({
   threads,
   activeThreadId,
@@ -160,27 +152,6 @@ function ChatViewContent() {
     }
   }
 
-  async function loadAllThreads(): Promise<void> {
-    const response = await fetch("/api/chat/threads?full=true");
-    if (!response.ok) {
-      throw new Error("Failed to load threads");
-    }
-
-    const payloads = (await response.json()) as ThreadPayload[];
-    const cache = new Map<string, ThreadPayload>();
-
-    for (const thread of payloads) {
-      cache.set(thread.id, thread);
-    }
-
-    threadCacheRef.current = cache;
-    setThreads(payloads.map(toThreadSummary));
-
-    if (payloads[0]) {
-      applyThread(payloads[0]);
-    }
-  }
-
   async function loadThreads(): Promise<ThreadSummary[]> {
     const response = await fetch("/api/chat/threads");
     if (!response.ok) {
@@ -252,9 +223,17 @@ function ChatViewContent() {
     void loadThread(threadId);
   }
 
+  async function loadInitialChat(): Promise<void> {
+    const nextThreads = await loadThreads();
+
+    if (nextThreads[0]) {
+      await loadThread(nextThreads[0].id);
+    }
+  }
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: load initial thread list once
   useEffect(() => {
-    void loadAllThreads().catch(() => {
+    void loadInitialChat().catch(() => {
       showToast({
         title: "Chat unavailable",
         description: "Could not load your chat threads.",
