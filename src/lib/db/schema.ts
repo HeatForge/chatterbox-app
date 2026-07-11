@@ -5,7 +5,6 @@ export interface Database {
   email_whitelist: EmailWhitelistTable;
   ai_user_settings: AiUserSettingsTable;
   ai_providers: AiProvidersTable;
-  ai_provider_models: AiProviderModelsTable;
   chat_threads: ChatThreadsTable;
   chat_messages: ChatMessagesTable;
 }
@@ -42,13 +41,6 @@ export interface AiProvidersTable {
   updated_at: Generated<Date>;
 }
 
-export interface AiProviderModelsTable {
-  provider_id: string;
-  model_id: string;
-  display_name: string;
-  refreshed_at: Generated<Date>;
-}
-
 export interface ChatThreadsTable {
   id: string;
   user_id: string;
@@ -81,8 +73,6 @@ export type AiUserSettingsUpdate = Updateable<AiUserSettingsTable>;
 export type AiProvider = Selectable<AiProvidersTable>;
 export type NewAiProvider = Insertable<AiProvidersTable>;
 export type AiProviderUpdate = Updateable<AiProvidersTable>;
-export type AiProviderModel = Selectable<AiProviderModelsTable>;
-export type NewAiProviderModel = Insertable<AiProviderModelsTable>;
 export type ChatThread = Selectable<ChatThreadsTable>;
 export type NewChatThread = Insertable<ChatThreadsTable>;
 export type ChatThreadUpdate = Updateable<ChatThreadsTable>;

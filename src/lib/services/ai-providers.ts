@@ -182,33 +182,58 @@ export async function getUserSettings(userId: string) {
     .executeTakeFirstOrThrow();
 }
 
-export async function listProviderSummaries(
-  userId: string,
-): Promise<ProviderSummary[]> {
-  const providers = await db
+async function listUserProviders(userId: string): Promise<AiProvider[]> {
+  return db
     .selectFrom("ai_providers")
     .selectAll()
     .where("user_id", "=", userId)
     .orderBy("created_at", "asc")
     .execute();
+}
 
-  const modelCounts = await db
-    .selectFrom("ai_provider_models")
-    .innerJoin(
-      "ai_providers",
-      "ai_providers.id",
-      "ai_provider_models.provider_id",
-    )
-    .select([
-      "ai_provider_models.provider_id",
-      db.fn.count("ai_provider_models.model_id").as("model_count"),
-    ])
-    .where("ai_providers.user_id", "=", userId)
-    .groupBy("ai_provider_models.provider_id")
-    .execute();
+type ProviderWithModels = {
+  provider: AiProvider;
+  models: RemoteModel[];
+};
 
+async function fetchProvidersWithModels(
+  providers: AiProvider[],
+): Promise<ProviderWithModels[]> {
+  const results = await Promise.allSettled(
+    providers.map(async (provider) => ({
+      provider,
+      models: await fetchModels(provider),
+    })),
+  );
+
+  return results.flatMap((result) =>
+    result.status === "fulfilled" ? [result.value] : [],
+  );
+}
+
+function toModelOptions({
+  provider,
+  models,
+}: ProviderWithModels): ModelOption[] {
+  return models.map((model) => ({
+    providerId: provider.id,
+    providerName: provider.display_name,
+    providerKey: assertProviderKey(provider.provider_key),
+    modelId: model.id,
+    label: model.label,
+  }));
+}
+
+export async function listProviderSummaries(
+  userId: string,
+): Promise<ProviderSummary[]> {
+  const providers = await listUserProviders(userId);
+  const providersWithModels = await fetchProvidersWithModels(providers);
   const modelCountByProvider = new Map(
-    modelCounts.map((row) => [row.provider_id, Number(row.model_count)]),
+    providersWithModels.map(({ provider, models }) => [
+      provider.id,
+      models.length,
+    ]),
   );
 
   return providers.map((provider) =>
@@ -217,33 +242,14 @@ export async function listProviderSummaries(
 }
 
 export async function listModelOptions(userId: string): Promise<ModelOption[]> {
-  const rows = await db
-    .selectFrom("ai_provider_models")
-    .innerJoin(
-      "ai_providers",
-      "ai_providers.id",
-      "ai_provider_models.provider_id",
-    )
-    .select([
-      "ai_provider_models.provider_id",
-      "ai_provider_models.model_id",
-      "ai_provider_models.display_name",
-      "ai_providers.provider_key",
-      "ai_providers.display_name as provider_name",
-    ])
-    .where("ai_providers.user_id", "=", userId)
-    .where("ai_providers.enabled", "=", true)
-    .orderBy("ai_providers.display_name", "asc")
-    .orderBy("ai_provider_models.display_name", "asc")
-    .execute();
+  const providers = (await listUserProviders(userId)).filter(
+    (provider) => provider.enabled,
+  );
+  const providersWithModels = await fetchProvidersWithModels(providers);
 
-  return rows.map((row) => ({
-    providerId: row.provider_id,
-    providerName: row.provider_name,
-    providerKey: assertProviderKey(row.provider_key),
-    modelId: row.model_id,
-    label: row.display_name,
-  }));
+  return providersWithModels
+    .flatMap(toModelOptions)
+    .sort((left, right) => left.label.localeCompare(right.label));
 }
 
 export type AiSettingsConfig = {
@@ -259,11 +265,17 @@ export type AiSettingsConfig = {
 export async function getAiSettingsConfig(
   userId: string,
 ): Promise<AiSettingsConfig> {
-  const [settings, providers, models] = await Promise.all([
+  const [settings, providers] = await Promise.all([
     getUserSettings(userId),
-    listProviderSummaries(userId),
-    listModelOptions(userId),
+    listUserProviders(userId),
   ]);
+  const providersWithModels = await fetchProvidersWithModels(providers);
+  const modelCountByProvider = new Map(
+    providersWithModels.map(({ provider, models }) => [
+      provider.id,
+      models.length,
+    ]),
+  );
 
   return {
     settings: {
@@ -271,17 +283,13 @@ export async function getAiSettingsConfig(
       preferredProviderId: settings.preferred_provider_id,
       preferredModelId: settings.preferred_model_id,
     },
-    providers,
-    models,
-  };
-}
-
-/** @deprecated Use getAiSettingsConfig — catalog is static on the client. */
-export async function getAiSettingsPayload(userId: string) {
-  const config = await getAiSettingsConfig(userId);
-  return {
-    catalog: PROVIDER_CATALOG,
-    ...config,
+    providers: providers.map((provider) =>
+      summarizeProvider(provider, modelCountByProvider),
+    ),
+    models: providersWithModels
+      .filter(({ provider }) => provider.enabled)
+      .flatMap(toModelOptions)
+      .sort((left, right) => left.label.localeCompare(right.label)),
   };
 }
 
@@ -296,21 +304,14 @@ export async function updateAiSettings(
   await getUserSettings(userId);
 
   if (input.preferredProviderId && input.preferredModelId) {
-    const model = await db
-      .selectFrom("ai_provider_models")
-      .innerJoin(
-        "ai_providers",
-        "ai_providers.id",
-        "ai_provider_models.provider_id",
-      )
-      .select("ai_provider_models.model_id")
-      .where("ai_providers.user_id", "=", userId)
-      .where("ai_providers.enabled", "=", true)
-      .where("ai_provider_models.provider_id", "=", input.preferredProviderId)
-      .where("ai_provider_models.model_id", "=", input.preferredModelId)
-      .executeTakeFirst();
+    const provider = await getUserProvider(userId, input.preferredProviderId);
 
-    if (!model) {
+    if (!provider.enabled) {
+      throw new BadRequestError("Selected provider is disabled");
+    }
+
+    const models = await fetchModels(provider);
+    if (!models.some((model) => model.id === input.preferredModelId)) {
       throw new BadRequestError("Selected model is not available");
     }
   }
@@ -402,13 +403,10 @@ export async function updateProvider(
     .returningAll()
     .executeTakeFirstOrThrow();
 
-  const models = await db
-    .selectFrom("ai_provider_models")
-    .select("provider_id")
-    .where("provider_id", "=", providerId)
-    .execute();
+  const providersWithModels = await fetchProvidersWithModels([provider]);
+  const modelCount = providersWithModels[0]?.models.length ?? 0;
 
-  return summarizeProvider(provider, new Map([[providerId, models.length]]));
+  return summarizeProvider(provider, new Map([[providerId, modelCount]]));
 }
 
 export async function deleteProvider(userId: string, providerId: string) {
@@ -419,38 +417,6 @@ export async function deleteProvider(userId: string, providerId: string) {
     .where("user_id", "=", userId)
     .where("id", "=", providerId)
     .execute();
-}
-
-export async function refreshProviderModels(
-  userId: string,
-  providerId: string,
-): Promise<ModelOption[]> {
-  const provider = await getUserProvider(userId, providerId);
-  const models = await fetchModels(provider);
-
-  await db.transaction().execute(async (trx) => {
-    await trx
-      .deleteFrom("ai_provider_models")
-      .where("provider_id", "=", providerId)
-      .execute();
-
-    if (models.length === 0) {
-      return;
-    }
-
-    await trx
-      .insertInto("ai_provider_models")
-      .values(
-        models.map((model) => ({
-          provider_id: providerId,
-          model_id: model.id,
-          display_name: model.label,
-        })),
-      )
-      .execute();
-  });
-
-  return listModelOptions(userId);
 }
 
 export async function getGenerationModel(

@@ -178,21 +178,6 @@ export default function SettingsView() {
     });
   }
 
-  async function refreshModels(providerId: string): Promise<void> {
-    await runAction(`models-${providerId}`, async () => {
-      const response = await fetch(
-        `/api/settings/ai/providers/${providerId}/models`,
-        { method: "POST" },
-      );
-
-      if (!response.ok) {
-        throw new Error("Model list could not be refreshed");
-      }
-
-      await loadSettings();
-    });
-  }
-
   async function deleteProvider(providerId: string): Promise<void> {
     await runAction(`delete-${providerId}`, async () => {
       const response = await fetch(`/api/settings/ai/providers/${providerId}`, {
@@ -274,8 +259,8 @@ export default function SettingsView() {
               <div className={styles.settingGroup}>
                 <span className={styles.settingLabel}>Add provider</span>
                 <p className={styles.settingHint}>
-                  Store your own API key, then refresh models from that
-                  provider.
+                  Store your own API key. Models are fetched from the provider
+                  when you open settings.
                 </p>
                 <div className={styles.formGrid}>
                   <Select
@@ -328,7 +313,7 @@ export default function SettingsView() {
                           <p className={styles.settingHint}>
                             {provider.modelCount}{" "}
                             {provider.modelCount === 1 ? "model" : "models"}{" "}
-                            cached
+                            available
                             {provider.baseUrl ? ` · ${provider.baseUrl}` : ""}
                           </p>
                         </div>
@@ -346,12 +331,6 @@ export default function SettingsView() {
                                 enabled: !provider.enabled,
                               })
                             }
-                          />
-                          <Button
-                            text="Refresh models"
-                            intent={Intent.SECONDARY}
-                            disabled={busyAction === `models-${provider.id}`}
-                            onClick={() => void refreshModels(provider.id)}
                           />
                           <Button
                             text="Remove"
@@ -382,7 +361,7 @@ export default function SettingsView() {
                     value={selectedModel}
                     onChange={setSelectedModel}
                     searchable
-                    emptyMessage="Refresh an enabled provider to load models."
+                    emptyMessage="Add and enable a provider to load models."
                   />
                 )}
                 <Button
