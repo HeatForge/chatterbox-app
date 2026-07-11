@@ -29,17 +29,6 @@
   padding: 0.5rem;
 }
 
-.button[data-minimal] {
-  background: transparent;
-  border-color: transparent;
-}
-
-.button[data-minimal]:hover:not(:disabled),
-.button[data-minimal]:active:not(:disabled) {
-  background: transparent;
-  border-color: transparent;
-}
-
 .button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -79,15 +68,14 @@
 }
 
 .button[data-intent="tertiary"] {
-  color: var(--intent-tertiary-fg);
-  background: var(--intent-tertiary-bg);
-  border-color: color-mix(in srgb, var(--color-tertiary-light) 35%, transparent);
+  color: var(--color-text);
+  background: var(--color-tertiary);;
 }
 
 .button[data-intent="tertiary"]:hover:not(:disabled) {
   background: color-mix(
     in srgb,
-    var(--color-tertiary) 30%,
+    var(--color-tertiary) 38%,
     var(--color-background-dark)
   );
 }
@@ -186,6 +174,18 @@
     var(--color-info) 32%,
     var(--color-background-dark)
   );
+}
+
+
+.button[data-minimal] {
+  background: transparent;
+  border-color: transparent;
+}
+
+.button[data-minimal]:hover:not(:disabled),
+.button[data-minimal]:active:not(:disabled) {
+  background: var(--color-background-light);
+  border-color: transparent;
 }
 
 .text {
