@@ -16,3 +16,8 @@ export async function getRequiredUserId(headers: Headers): Promise<string> {
 
   return userId;
 }
+
+export async function getServerUserId(): Promise<string> {
+  const { headers } = await import("next/headers");
+  return getRequiredUserId(await headers());
+}
