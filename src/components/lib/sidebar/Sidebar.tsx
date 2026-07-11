@@ -29,6 +29,7 @@ function SidebarLockButton() {
       leftIcon={locked ? IconNames["lock-fill"] : IconNames["unlock-line"]}
       intent={Intent.TERTIARY}
       iconSize={18}
+      minimal
       onClick={toggleLocked}
       aria-pressed={locked}
       aria-label={locked ? "Unlock sidebar" : "Lock sidebar open"}
