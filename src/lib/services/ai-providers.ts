@@ -4,7 +4,6 @@ import { createMistral } from "@ai-sdk/mistral";
 import { createOpenAI } from "@ai-sdk/openai";
 import type { EmbeddingModel, LanguageModel } from "ai";
 import { nanoid } from "nanoid";
-import { FAL_IMAGE_MODELS } from "@/lib/ai/image-model-catalog";
 import {
   PROVIDER_CATALOG,
   type ProviderCatalogItem,
@@ -121,6 +120,10 @@ function authHeaders(provider: AiProvider): HeadersInit {
     };
   }
 
+  if (provider.provider_key === "fal") {
+    return { Authorization: `Key ${provider.api_key}` };
+  }
+
   return { Authorization: `Bearer ${provider.api_key}` };
 }
 
@@ -168,9 +171,35 @@ function extractModels(payload: unknown, providerKey: string): RemoteModel[] {
       }
 
       const model = item as Record<string, unknown>;
-      const rawId = typeof model.id === "string" ? model.id : model.name;
+      const rawId =
+        typeof model.id === "string"
+          ? model.id
+          : typeof model.endpoint_id === "string"
+            ? model.endpoint_id
+            : model.name;
       if (typeof rawId !== "string") {
         return null;
+      }
+
+      if (providerKey === "fal") {
+        const metadata =
+          model.metadata && typeof model.metadata === "object"
+            ? (model.metadata as Record<string, unknown>)
+            : {};
+        const category =
+          typeof metadata.category === "string" ? metadata.category : "";
+
+        if (category && category !== "text-to-image") {
+          return null;
+        }
+
+        return {
+          id: rawId,
+          label:
+            typeof metadata.display_name === "string"
+              ? metadata.display_name
+              : rawId,
+        };
       }
 
       if (
@@ -217,7 +246,9 @@ async function fetchModelsFromEndpoint(
 
   const response = await fetch(url, {
     headers:
-      provider.provider_key === "google" ? undefined : authHeaders(provider),
+      provider.provider_key === "google" || provider.provider_key === "fal"
+        ? undefined
+        : authHeaders(provider),
   });
 
   if (!response.ok) {
@@ -245,6 +276,17 @@ async function fetchModels(provider: AiProvider): Promise<RemoteModel[]> {
   }
 
   return models.filter((model) => !isEmbeddingModel(model.id));
+}
+
+async function fetchImageModels(provider: AiProvider): Promise<RemoteModel[]> {
+  if (!supportsImageGeneration(provider)) {
+    return [];
+  }
+
+  return fetchModelsFromEndpoint(
+    provider,
+    "category=text-to-image&status=active&limit=100",
+  );
 }
 
 async function fetchEmbeddingModels(
@@ -283,7 +325,7 @@ function getModelCacheKey(
  */
 async function getCachedProviderModels(
   provider: AiProvider,
-  kind: "chat" | "embedding",
+  kind: "chat" | "embedding" | "image",
 ): Promise<RemoteModel[]> {
   const key = getModelCacheKey(provider, kind);
   const cached = providerModelCache.get(key);
@@ -294,7 +336,9 @@ async function getCachedProviderModels(
   const models =
     kind === "chat"
       ? await fetchModels(provider)
-      : await fetchEmbeddingModels(provider);
+      : kind === "embedding"
+        ? await fetchEmbeddingModels(provider)
+        : await fetchImageModels(provider);
   providerModelCache.set(key, {
     models,
     expiresAt: Date.now() + MODEL_CACHE_TTL_MS,
@@ -366,16 +410,11 @@ async function fetchProvidersWithModels(
 ): Promise<ProviderWithModels[]> {
   const results = await Promise.allSettled(
     providers.map(async (provider) => {
-      const [models, embeddingModels] = await Promise.all([
+      const [models, embeddingModels, imageModels] = await Promise.all([
         getCachedProviderModels(provider, "chat"),
         getCachedProviderModels(provider, "embedding"),
+        getCachedProviderModels(provider, "image"),
       ]);
-      const imageModels = supportsImageGeneration(provider)
-        ? FAL_IMAGE_MODELS.map((model) => ({
-            id: model.modelId,
-            label: model.label,
-          }))
-        : [];
       return { provider, models, embeddingModels, imageModels };
     }),
   );
@@ -656,13 +695,8 @@ async function validateImageModel(
     throw new BadRequestError("Image generation only supports Fal.ai");
   }
 
-  if (
-    !FAL_IMAGE_MODELS.some(
-      (model) =>
-        model.providerKey === provider.provider_key &&
-        model.modelId === modelId,
-    )
-  ) {
+  const models = await getCachedProviderModels(provider, "image");
+  if (!models.some((model) => model.id === modelId)) {
     throw new BadRequestError("Selected image model is not available");
   }
 }

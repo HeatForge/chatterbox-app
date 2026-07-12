@@ -109,6 +109,7 @@ export const PROVIDER_CATALOG: ProviderCatalogItem[] = [
   {
     key: "fal",
     label: "Fal.ai",
+    modelEndpoint: "https://api.fal.ai/v1/models",
     apiKeyUrl: "https://fal.ai/dashboard/keys",
     imageGeneration: true,
   },

@@ -9,7 +9,7 @@ vi.mock("@fal-ai/client", () => ({
 vi.mock("@/lib/services/ai-providers", () => ({
   getPreferredImageGenerationModel: vi.fn().mockResolvedValue({
     providerId: "provider-1",
-    modelId: "fal-ai/flux-1/schnell",
+    modelId: "fal-ai/flux/schnell",
     systemPrompt: "unused",
     apiKey: "fal-key",
   }),
@@ -35,7 +35,7 @@ describe("generateImageFromPrompt", () => {
       "![Generated image: A tiny robot painting](https://example.com/generated.png)\n\n**Prompt:** A tiny robot painting",
     );
 
-    expect(subscribe).toHaveBeenCalledWith("fal-ai/flux-1/schnell", {
+    expect(subscribe).toHaveBeenCalledWith("fal-ai/flux/schnell", {
       input: { prompt: "A tiny robot painting" },
     });
   });
