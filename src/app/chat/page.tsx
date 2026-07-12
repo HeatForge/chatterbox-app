@@ -602,7 +602,7 @@ function ChatPageContent() {
       );
     });
 
-    function finish(event: Event): void {
+    function finish(event: Event, eventType: "done" | "error"): void {
       const message = JSON.parse((event as MessageEvent).data) as ChatMessage;
       setMessages((current) =>
         current.map((item) => (item.id === message.id ? message : item)),
@@ -610,16 +610,31 @@ function ChatPageContent() {
       stream.close();
       streamsRef.current.delete(messageId);
       setInputState(ChatInputState.READY);
+
+      if (eventType === "error") {
+        showToast({
+          title: "Generation failed",
+          description: message.error ?? "Could not complete generation.",
+          intent: Intent.DANGER,
+          placement: ToastPlacement.BOTTOM_RIGHT,
+        });
+      }
     }
 
-    stream.addEventListener("done", finish);
+    stream.addEventListener("done", (event) => finish(event, "done"));
     stream.addEventListener("error", (event) => {
       if ("data" in event && typeof event.data === "string") {
-        finish(event);
+        finish(event, "error");
       } else {
         stream.close();
         streamsRef.current.delete(messageId);
         setInputState(ChatInputState.ERROR);
+        showToast({
+          title: "Generation failed",
+          description: "The generation stream disconnected.",
+          intent: Intent.DANGER,
+          placement: ToastPlacement.BOTTOM_RIGHT,
+        });
       }
     });
   }
