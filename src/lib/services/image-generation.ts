@@ -40,7 +40,7 @@ function extractImageUrl(data: unknown): string {
 
 function escapeMarkdownAltText(value: string): string {
   return value
-    .replace(/[\\\[\]]/g, "\\$&")
+    .replace(/[\\[\]]/g, "\\$&")
     .replace(/\s+/g, " ")
     .trim();
 }

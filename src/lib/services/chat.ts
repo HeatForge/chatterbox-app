@@ -431,7 +431,7 @@ function startImageGeneration(
   }
 
   const generation = (async () => {
-    let streamingMessage = toMessageDto(assistantMessage);
+    const streamingMessage = toMessageDto(assistantMessage);
     streamingMessages.set(assistantMessageId, streamingMessage);
     const content = await generateImageFromPrompt(userId, prompt);
     await appendAssistantContent(assistantMessageId, content);

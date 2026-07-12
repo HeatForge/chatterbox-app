@@ -4,13 +4,12 @@ import { createMistral } from "@ai-sdk/mistral";
 import { createOpenAI } from "@ai-sdk/openai";
 import type { EmbeddingModel, LanguageModel } from "ai";
 import { nanoid } from "nanoid";
-
+import { FAL_IMAGE_MODELS } from "@/lib/ai/image-model-catalog";
 import {
   PROVIDER_CATALOG,
   type ProviderCatalogItem,
   type ProviderKey,
 } from "@/lib/ai/provider-catalog";
-import { FAL_IMAGE_MODELS } from "@/lib/ai/image-model-catalog";
 import { type AiProvider, db } from "@/lib/db";
 import { BadRequestError, NotFoundError } from "@/lib/services/api-errors";
 
