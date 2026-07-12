@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { deleteProvider, updateProvider } from "@/lib/services/ai-providers";
+import {
+  deleteProvider,
+  getAiSettingsConfig,
+  updateProvider,
+} from "@/lib/services/ai-providers";
 import { errorResponse } from "@/lib/services/api-errors";
 import { getRequiredUserId } from "@/lib/services/session";
 
@@ -20,7 +24,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     const userId = await getRequiredUserId(request.headers);
     const { providerId } = await params;
     const body = providerUpdateSchema.parse(await request.json());
-    return NextResponse.json(await updateProvider(userId, providerId, body));
+    await updateProvider(userId, providerId, body);
+    return NextResponse.json(await getAiSettingsConfig(userId));
   } catch (error) {
     return errorResponse(error);
   }
@@ -31,7 +36,7 @@ export async function DELETE(request: Request, { params }: RouteContext) {
     const userId = await getRequiredUserId(request.headers);
     const { providerId } = await params;
     await deleteProvider(userId, providerId);
-    return new NextResponse(null, { status: 204 });
+    return NextResponse.json(await getAiSettingsConfig(userId));
   } catch (error) {
     return errorResponse(error);
   }

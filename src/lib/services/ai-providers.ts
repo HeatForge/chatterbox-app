@@ -25,6 +25,14 @@ const KNOWN_1536_EMBEDDING_MODELS = new Set([
   "text-embedding-3-small",
   "text-embedding-ada-002",
 ]);
+const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
+
+type CachedModelList = {
+  expiresAt: number;
+  models: RemoteModel[];
+};
+
+const providerModelCache = new Map<string, CachedModelList>();
 
 export function isEmbeddingModel(modelId: string): boolean {
   const normalized = modelId.toLowerCase();
@@ -250,6 +258,48 @@ async function fetchEmbeddingModels(
   return models.filter((model) => isSupportedEmbeddingModel(model.id));
 }
 
+function getModelCacheKey(
+  provider: AiProvider,
+  kind: "chat" | "embedding",
+): string {
+  return `${provider.id}:${provider.updated_at.toISOString()}:${kind}`;
+}
+
+/**
+ * Returns a short-lived provider model catalog without persisting credentials.
+ * The key includes the provider update timestamp, so configuration changes
+ * naturally bypass older entries even before explicit invalidation.
+ */
+async function getCachedProviderModels(
+  provider: AiProvider,
+  kind: "chat" | "embedding",
+): Promise<RemoteModel[]> {
+  const key = getModelCacheKey(provider, kind);
+  const cached = providerModelCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.models;
+  }
+
+  const models =
+    kind === "chat"
+      ? await fetchModels(provider)
+      : await fetchEmbeddingModels(provider);
+  providerModelCache.set(key, {
+    models,
+    expiresAt: Date.now() + MODEL_CACHE_TTL_MS,
+  });
+  return models;
+}
+
+/** Removes all transient model catalog entries for a changed provider. */
+function invalidateProviderModelCache(providerId: string): void {
+  for (const key of providerModelCache.keys()) {
+    if (key.startsWith(`${providerId}:`)) {
+      providerModelCache.delete(key);
+    }
+  }
+}
+
 function summarizeProvider(
   provider: AiProvider,
   modelCountByProvider: Map<string, number>,
@@ -303,11 +353,13 @@ async function fetchProvidersWithModels(
   providers: AiProvider[],
 ): Promise<ProviderWithModels[]> {
   const results = await Promise.allSettled(
-    providers.map(async (provider) => ({
-      provider,
-      models: await fetchModels(provider),
-      embeddingModels: await fetchEmbeddingModels(provider),
-    })),
+    providers.map(async (provider) => {
+      const [models, embeddingModels] = await Promise.all([
+        getCachedProviderModels(provider, "chat"),
+        getCachedProviderModels(provider, "embedding"),
+      ]);
+      return { provider, models, embeddingModels };
+    }),
   );
 
   return results.flatMap((result) =>
@@ -372,6 +424,35 @@ export type AiSettingsConfig = {
   embeddingModels: ModelOption[];
 };
 
+/**
+ * Loads settings and provider rows without contacting external model APIs.
+ * This powers the server-rendered settings shell; the complete catalog is
+ * fetched lazily by `getAiSettingsConfig`.
+ */
+export async function getAiSettingsShell(
+  userId: string,
+): Promise<AiSettingsConfig> {
+  const [settings, providers] = await Promise.all([
+    getUserSettings(userId),
+    listUserProviders(userId),
+  ]);
+
+  return {
+    settings: {
+      systemPrompt: settings.system_prompt,
+      preferredProviderId: settings.preferred_provider_id,
+      preferredModelId: settings.preferred_model_id,
+      preferredEmbeddingProviderId: settings.preferred_embedding_provider_id,
+      preferredEmbeddingModelId: settings.preferred_embedding_model_id,
+    },
+    providers: providers.map((provider) =>
+      summarizeProvider(provider, new Map()),
+    ),
+    models: [],
+    embeddingModels: [],
+  };
+}
+
 export async function getAiSettingsConfig(
   userId: string,
 ): Promise<AiSettingsConfig> {
@@ -432,7 +513,7 @@ export async function updateAiSettings(
       throw new BadRequestError("Selected provider is disabled");
     }
 
-    const models = await fetchModels(provider);
+    const models = await getCachedProviderModels(provider, "chat");
     if (!models.some((model) => model.id === input.preferredModelId)) {
       throw new BadRequestError("Selected model is not available");
     }
@@ -492,7 +573,7 @@ async function validateEmbeddingModel(
     throw new BadRequestError("Selected embedding provider is disabled");
   }
 
-  const models = await fetchEmbeddingModels(provider);
+  const models = await getCachedProviderModels(provider, "embedding");
   if (!models.some((model) => model.id === modelId)) {
     throw new BadRequestError("Selected embedding model is not available");
   }
@@ -552,6 +633,7 @@ export async function addProvider(
     .returningAll()
     .executeTakeFirstOrThrow();
 
+  invalidateProviderModelCache(provider.id);
   return summarizeProvider(provider, new Map());
 }
 
@@ -601,6 +683,7 @@ export async function updateProvider(
     .returningAll()
     .executeTakeFirstOrThrow();
 
+  invalidateProviderModelCache(providerId);
   const providersWithModels = await fetchProvidersWithModels([provider]);
   const modelCount = providersWithModels[0]?.models.length ?? 0;
 
@@ -615,6 +698,7 @@ export async function deleteProvider(userId: string, providerId: string) {
     .where("user_id", "=", userId)
     .where("id", "=", providerId)
     .execute();
+  invalidateProviderModelCache(providerId);
 }
 
 export async function getGenerationModel(

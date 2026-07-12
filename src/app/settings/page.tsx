@@ -5,9 +5,15 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/lib/button/Button";
 import { Select } from "@/components/lib/select/Select";
+import { useSettingsInitialData } from "@/components/settings/SettingsInitialDataProvider";
 import { ToastPlacement } from "@/hooks/use-toaster/types";
 import { useToaster } from "@/hooks/use-toaster/use-toaster";
 import { PROVIDER_CATALOG } from "@/lib/ai/provider-catalog";
+import {
+  flushAppCachePersistence,
+  getCachedSettings,
+  setCachedSettings,
+} from "@/lib/cache/app-cache";
 import { IconNames } from "@/lib/IconNames";
 import { Intent } from "@/lib/Intent";
 import type { AiSettingsConfig } from "@/lib/services/ai-providers";
@@ -46,11 +52,17 @@ function parseModelValue(value: string) {
 }
 
 export default function SettingsPage() {
+  const initialSettings = useSettingsInitialData();
+  const cachedSettings = getCachedSettings();
   const router = useRouter();
   const showToast = useToaster();
   const [category, setCategory] = useState<SettingsCategory>("providers");
-  const [config, setConfig] = useState<AiSettingsConfig | null>(null);
-  const [configLoading, setConfigLoading] = useState(true);
+  const [config, setConfig] = useState<AiSettingsConfig | null>(
+    cachedSettings ?? initialSettings,
+  );
+  const [configLoading, setConfigLoading] = useState(
+    !cachedSettings && !initialSettings,
+  );
   const [providerKey, setProviderKey] = useState<string>(
     PROVIDER_CATALOG[0]?.key ?? "",
   );
@@ -67,8 +79,41 @@ export default function SettingsPage() {
       throw new Error("Failed to load AI settings");
     }
 
+    await applySettingsResponse(response);
+  }
+
+  useEffect(() => {
+    if (initialSettings && !cachedSettings) {
+      setSystemPrompt(initialSettings.settings.systemPrompt);
+      setSelectedModel(
+        initialSettings.settings.preferredProviderId &&
+          initialSettings.settings.preferredModelId
+          ? getModelValue({
+              providerId: initialSettings.settings.preferredProviderId,
+              modelId: initialSettings.settings.preferredModelId,
+            })
+          : "",
+      );
+      setSelectedEmbeddingModel(
+        initialSettings.settings.preferredEmbeddingProviderId &&
+          initialSettings.settings.preferredEmbeddingModelId
+          ? getModelValue({
+              providerId: initialSettings.settings.preferredEmbeddingProviderId,
+              modelId: initialSettings.settings.preferredEmbeddingModelId,
+            })
+          : "",
+      );
+    }
+  }, [cachedSettings, initialSettings]);
+
+  /**
+   * Applies an authoritative settings response to both page state and the
+   * shared session cache, avoiding a second full settings/model reload.
+   */
+  async function applySettingsResponse(response: Response): Promise<void> {
     const data = (await response.json()) as AiSettingsConfig;
     setConfig(data);
+    setCachedSettings(data);
     setSystemPrompt(data.settings.systemPrompt);
     setSelectedModel(
       data.settings.preferredProviderId && data.settings.preferredModelId
@@ -162,7 +207,7 @@ export default function SettingsPage() {
 
       setApiKey("");
       setBaseUrl("");
-      await loadSettings();
+      await applySettingsResponse(response);
     });
   }
 
@@ -181,7 +226,7 @@ export default function SettingsPage() {
         throw new Error("Provider could not be updated");
       }
 
-      await loadSettings();
+      await applySettingsResponse(response);
     });
   }
 
@@ -195,7 +240,7 @@ export default function SettingsPage() {
         throw new Error("Provider could not be deleted");
       }
 
-      await loadSettings();
+      await applySettingsResponse(response);
     });
   }
 
@@ -216,7 +261,7 @@ export default function SettingsPage() {
         throw new Error("Settings could not be saved");
       }
 
-      await loadSettings();
+      await applySettingsResponse(response);
       showToast({
         title: "Settings saved",
         description: "Your default chat model and system prompt were updated.",
@@ -242,7 +287,7 @@ export default function SettingsPage() {
         throw new Error("Embedding settings could not be saved");
       }
 
-      await loadSettings();
+      await applySettingsResponse(response);
       showToast({
         title: "Embedding model saved",
         description: "Your default embedding model was updated.",
@@ -281,6 +326,7 @@ export default function SettingsPage() {
             leftIcon={IconNames["arrow-left-line"]}
             intent={Intent.TERTIARY}
             onClick={() => router.push("/chat")}
+            onMouseDown={flushAppCachePersistence}
           />
         </header>
 

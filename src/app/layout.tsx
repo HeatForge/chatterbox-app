@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
 
+import { AppCacheSessionSync } from "@/components/AppCacheSessionSync";
 import { EventProvider } from "@/hooks/event-provider/event-provider";
 
 import "./globals.css";
@@ -23,6 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={jetbrainsMono.variable}>
       <body>
+        <AppCacheSessionSync />
         <EventProvider>{children}</EventProvider>
       </body>
     </html>

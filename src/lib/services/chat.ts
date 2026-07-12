@@ -35,14 +35,26 @@ export type ChatThreadPayload = ThreadSummary & {
 };
 
 type GenerationRegistry = Map<string, Promise<void>>;
+type StreamEvent = {
+  type: "content" | "done" | "error";
+  message: ChatMessageDto;
+};
+type StreamListeners = Map<string, Set<(event: StreamEvent) => void>>;
+type StreamingMessages = Map<string, ChatMessageDto>;
 
 const registryKey = Symbol.for("chatterbox.generationRegistry");
 const globalState = globalThis as typeof globalThis & {
   [registryKey]?: GenerationRegistry;
+  chatterboxStreamListeners?: StreamListeners;
+  chatterboxStreamingMessages?: StreamingMessages;
 };
 
 const generationRegistry = globalState[registryKey] ?? new Map();
 globalState[registryKey] = generationRegistry;
+const streamListeners = globalState.chatterboxStreamListeners ?? new Map();
+globalState.chatterboxStreamListeners = streamListeners;
+const streamingMessages = globalState.chatterboxStreamingMessages ?? new Map();
+globalState.chatterboxStreamingMessages = streamingMessages;
 
 function toThreadSummary(thread: ChatThread): ThreadSummary {
   return {
@@ -64,6 +76,30 @@ function toMessageDto(message: ChatMessage): ChatMessageDto {
     status: message.status,
     error: message.error,
     createdAt: message.created_at.toISOString(),
+  };
+}
+
+/** Broadcasts an in-process generation update to open SSE connections. */
+function publishStreamEvent(messageId: string, event: StreamEvent): void {
+  for (const listener of streamListeners.get(messageId) ?? []) {
+    listener(event);
+  }
+}
+
+/** Registers an SSE listener until the request aborts or a terminal event arrives. */
+function subscribeToStream(
+  messageId: string,
+  listener: (event: StreamEvent) => void,
+): () => void {
+  const listeners = streamListeners.get(messageId) ?? new Set();
+  listeners.add(listener);
+  streamListeners.set(messageId, listeners);
+
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) {
+      streamListeners.delete(messageId);
+    }
   };
 }
 
@@ -147,6 +183,7 @@ export async function listThreads(userId: string): Promise<ThreadSummary[]> {
     .selectFrom("chat_threads")
     .selectAll()
     .where("user_id", "=", userId)
+    .where("deleted_at", "is", null)
     .orderBy("updated_at", "desc")
     .execute();
   return threads.map(toThreadSummary);
@@ -200,6 +237,7 @@ export async function listThreadPayloads(
     .selectFrom("chat_threads")
     .selectAll()
     .where("user_id", "=", userId)
+    .where("deleted_at", "is", null)
     .orderBy("updated_at", "desc")
     .execute();
 
@@ -282,9 +320,10 @@ async function finishAssistantMessage(
 function startAssistantGeneration(
   userId: string,
   thread: ChatThread,
-  assistantMessageId: string,
+  assistantMessage: ChatMessage,
   userQuery: string,
 ): void {
+  const assistantMessageId = assistantMessage.id;
   if (generationRegistry.has(assistantMessageId)) {
     return;
   }
@@ -307,15 +346,38 @@ function startAssistantGeneration(
     });
 
     let content = "";
+    let lastCheckpointAt = Date.now();
+    let streamingMessage = toMessageDto(assistantMessage);
+    streamingMessages.set(assistantMessageId, streamingMessage);
     for await (const delta of result.textStream) {
       content += delta;
-      await appendAssistantContent(assistantMessageId, content);
+      streamingMessage = { ...streamingMessage, content };
+      streamingMessages.set(assistantMessageId, streamingMessage);
+      publishStreamEvent(assistantMessageId, {
+        type: "content",
+        message: streamingMessage,
+      });
+
+      if (Date.now() - lastCheckpointAt >= 500) {
+        await appendAssistantContent(assistantMessageId, content);
+        lastCheckpointAt = Date.now();
+      }
     }
 
     if (content.length === 0) {
       throw new Error("Model returned an empty response");
     }
+    await appendAssistantContent(assistantMessageId, content);
     await finishAssistantMessage(assistantMessageId, "completed");
+    const completedMessage = {
+      ...streamingMessage,
+      status: "completed" as const,
+    };
+    streamingMessages.delete(assistantMessageId);
+    publishStreamEvent(assistantMessageId, {
+      type: "done",
+      message: completedMessage,
+    });
 
     if (thread.project_id) {
       indexMessageSafely(userId, {
@@ -330,6 +392,17 @@ function startAssistantGeneration(
       const message =
         error instanceof Error ? error.message : "Generation failed";
       await finishAssistantMessage(assistantMessageId, "error", message);
+      const failedMessage = {
+        ...(streamingMessages.get(assistantMessageId) ??
+          toMessageDto(assistantMessage)),
+        status: "error" as const,
+        error: message,
+      };
+      streamingMessages.delete(assistantMessageId);
+      publishStreamEvent(assistantMessageId, {
+        type: "error",
+        message: failedMessage,
+      });
     })
     .finally(() => {
       generationRegistry.delete(assistantMessageId);
@@ -354,6 +427,9 @@ export async function sendMessage(
         projectId: input.projectId,
       }).then((payload) => getUserThread(userId, payload.id));
 
+  const updatedAt = new Date();
+  const updatedTitle =
+    thread.title === "New chat" ? makeTitle(content) : thread.title;
   const [userMessage, assistantMessage] = await db
     .transaction()
     .execute(async (trx) => {
@@ -386,9 +462,8 @@ export async function sendMessage(
       await trx
         .updateTable("chat_threads")
         .set({
-          title:
-            thread.title === "New chat" ? makeTitle(content) : thread.title,
-          updated_at: new Date(),
+          title: updatedTitle,
+          updated_at: updatedAt,
         })
         .where("id", "=", thread.id)
         .execute();
@@ -413,10 +488,15 @@ export async function sendMessage(
     });
   }
 
-  startAssistantGeneration(userId, thread, assistantMessage.id, content);
+  startAssistantGeneration(userId, thread, assistantMessage, content);
 
   return {
     threadId: thread.id,
+    thread: {
+      ...toThreadSummary(thread),
+      title: updatedTitle,
+      updatedAt: updatedAt.toISOString(),
+    },
     userMessage: toMessageDto(userMessage),
     assistantMessage: toMessageDto(assistantMessage),
   };
@@ -446,10 +526,6 @@ async function getAssistantMessage(
 function encodeSse(event: string, data: unknown): Uint8Array {
   const encoder = new TextEncoder();
   return encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function updateThread(
@@ -543,36 +619,53 @@ export async function createAssistantMessageStream(
   signal: AbortSignal,
 ): Promise<ReadableStream<Uint8Array>> {
   await getUserThread(userId, threadId);
-  await getAssistantMessage(userId, threadId, messageId);
+  const persistedMessage = await getAssistantMessage(
+    userId,
+    threadId,
+    messageId,
+  );
+  let cleanup = () => {};
 
   return new ReadableStream<Uint8Array>({
-    async start(controller) {
-      let lastContent: string | null = null;
-
-      while (!signal.aborted) {
-        const message = await getAssistantMessage(userId, threadId, messageId);
-
-        if (message.content !== lastContent) {
-          lastContent = message.content;
-          controller.enqueue(encodeSse("content", toMessageDto(message)));
-        }
-
-        if (message.status === "completed") {
-          controller.enqueue(encodeSse("done", toMessageDto(message)));
+    start(controller) {
+      let closed = false;
+      const close = () => {
+        if (!closed) {
+          closed = true;
+          unsubscribe();
+          signal.removeEventListener("abort", close);
           controller.close();
+        }
+      };
+      const onEvent = (event: StreamEvent) => {
+        if (closed) {
           return;
         }
 
-        if (message.status === "error") {
-          controller.enqueue(encodeSse("error", toMessageDto(message)));
-          controller.close();
-          return;
+        controller.enqueue(encodeSse(event.type, event.message));
+        if (event.type !== "content") {
+          close();
         }
+      };
+      const unsubscribe = subscribeToStream(messageId, onEvent);
+      cleanup = close;
+      signal.addEventListener("abort", close, { once: true });
 
-        await delay(350);
+      const initialMessage =
+        streamingMessages.get(messageId) ?? toMessageDto(persistedMessage);
+      if (initialMessage.content) {
+        controller.enqueue(encodeSse("content", initialMessage));
       }
-
-      controller.close();
+      if (initialMessage.status === "completed") {
+        onEvent({ type: "done", message: initialMessage });
+      } else if (initialMessage.status === "error") {
+        onEvent({ type: "error", message: initialMessage });
+      } else if (signal.aborted) {
+        close();
+      }
+    },
+    cancel() {
+      cleanup();
     },
   });
 }

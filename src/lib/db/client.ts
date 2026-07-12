@@ -1,7 +1,6 @@
 import { Kysely, PostgresDialect } from "kysely";
-import { Pool } from "pg";
 
-import { getDatabaseUrl } from "@/lib/env/database-url";
+import { getPool } from "@/lib/db/pool";
 
 import type { Database } from "./schema";
 
@@ -10,7 +9,7 @@ let instance: Kysely<Database> | undefined;
 export function getDb(): Kysely<Database> {
   if (!instance) {
     const dialect = new PostgresDialect({
-      pool: new Pool({ connectionString: getDatabaseUrl() }),
+      pool: getPool(),
     });
     instance = new Kysely<Database>({ dialect });
   }

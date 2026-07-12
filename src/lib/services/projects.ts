@@ -173,14 +173,75 @@ export async function listArchivedSidebarThreads(userId: string) {
   return { projects, standalone };
 }
 
+/**
+ * Reads every sidebar entity in two ordered queries, then partitions active
+ * and archived groups in memory. This replaces the previous six-query fan-out
+ * while preserving the public sidebar response shape.
+ */
 export async function listSidebarThreads(userId: string) {
-  const [projects, standalone, archived] = await Promise.all([
-    listProjectsWithThreads(userId),
-    listStandaloneThreads(userId),
-    listArchivedSidebarThreads(userId),
+  const [projects, threads] = await Promise.all([
+    db
+      .selectFrom("projects")
+      .selectAll()
+      .where("user_id", "=", userId)
+      .where("deleted_at", "is", null)
+      .orderBy("updated_at", "desc")
+      .execute(),
+    db
+      .selectFrom("chat_threads")
+      .selectAll()
+      .where("user_id", "=", userId)
+      .where("deleted_at", "is", null)
+      .orderBy("updated_at", "desc")
+      .execute(),
   ]);
 
-  return { projects, standalone, archived };
+  const projectThreads = new Map<string, ChatThread[]>();
+  const activeStandalone: StandaloneThreadSummary[] = [];
+  const archivedStandalone: StandaloneThreadSummary[] = [];
+
+  for (const thread of threads) {
+    if (thread.project_id) {
+      const grouped = projectThreads.get(thread.project_id) ?? [];
+      grouped.push(thread);
+      projectThreads.set(thread.project_id, grouped);
+      continue;
+    }
+
+    if (thread.archived_at) {
+      archivedStandalone.push(toStandaloneThreadSummary(thread));
+    } else {
+      activeStandalone.push(toStandaloneThreadSummary(thread));
+    }
+  }
+
+  const toProject = (
+    project: (typeof projects)[number],
+  ): ProjectWithThreads => ({
+    id: project.id,
+    title: project.title,
+    createdAt: project.created_at.toISOString(),
+    updatedAt: project.updated_at.toISOString(),
+    threads: (projectThreads.get(project.id) ?? [])
+      .filter((thread) => project.archived_at || !thread.archived_at)
+      .map(toProjectThreadSummary),
+  });
+
+  const activeProjects = projects
+    .filter((project) => !project.archived_at)
+    .map(toProject);
+  const archivedProjects = projects
+    .filter((project) => project.archived_at)
+    .map(toProject);
+
+  return {
+    projects: activeProjects,
+    standalone: activeStandalone,
+    archived: {
+      projects: archivedProjects,
+      standalone: archivedStandalone,
+    },
+  };
 }
 
 export async function createProject(userId: string, title: string) {

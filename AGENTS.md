@@ -34,6 +34,8 @@ storage via MinIO/S3. Deployed via Docker on a personal VPS behind Nginx.
 7. CSS Modules for component styles
 8. When creating features the PR's are to merge into the develop branch as that is automated to deploy to dev environment
 9. Don't touch main or stable branches. These are branches specifically for production deployment with stable releases.
+10. Document exported functions and non-obvious internal functions with JSDoc/TSDoc. Explain purpose, parameters/return behavior, side effects, cache ownership or invalidation, and error behavior when relevant; skip redundant comments on trivial helpers.
+11. After each substantive task, create or update a concise task memory in `docs/memory/<task-slug>.md`. Every memory must begin with a title followed immediately by a one-line `> Description:` summary, so future agents can inspect just the first lines before loading the full memory. Record the outcome, key files, validation, and any important follow-up constraints; never include secrets.
 
 
 ## Commands

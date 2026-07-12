@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { addProvider, providerKeys } from "@/lib/services/ai-providers";
+import {
+  addProvider,
+  getAiSettingsConfig,
+  providerKeys,
+} from "@/lib/services/ai-providers";
 import { errorResponse } from "@/lib/services/api-errors";
 import { getRequiredUserId } from "@/lib/services/session";
 
@@ -15,8 +19,10 @@ export async function POST(request: Request) {
   try {
     const userId = await getRequiredUserId(request.headers);
     const body = providerSchema.parse(await request.json());
-    const provider = await addProvider(userId, body);
-    return NextResponse.json(provider, { status: 201 });
+    await addProvider(userId, body);
+    return NextResponse.json(await getAiSettingsConfig(userId), {
+      status: 201,
+    });
   } catch (error) {
     return errorResponse(error);
   }

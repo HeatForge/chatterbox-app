@@ -1,6 +1,8 @@
 "use client";
 
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useChatInitialData } from "@/components/chat/ChatInitialDataProvider";
 import {
   ChatSidebar,
   type SidebarProject,
@@ -22,6 +24,14 @@ import { SidebarProvider, SidebarToggle } from "@/components/lib/sidebar";
 import { useModal } from "@/hooks/use-modal/use-modal";
 import { ToastPlacement } from "@/hooks/use-toaster/types";
 import { useToaster } from "@/hooks/use-toaster/use-toaster";
+import {
+  deleteCachedThread,
+  flushAppCachePersistence,
+  getCachedSidebar,
+  getCachedThread,
+  setCachedSidebar,
+  setCachedThread,
+} from "@/lib/cache/app-cache";
 import { Intent } from "@/lib/Intent";
 
 import styles from "./chat.module.css";
@@ -62,6 +72,7 @@ const EMPTY_SIDEBAR: SidebarData = {
 
 type SendMessageResponse = {
   threadId: string;
+  thread: Omit<ThreadPayload, "systemPrompt" | "messages">;
   userMessage: ChatMessage;
   assistantMessage: ChatMessage;
 };
@@ -130,21 +141,44 @@ function getProjectIdFromSelection(
 }
 
 function ChatPageContent() {
+  const initialData = useChatInitialData();
+  const initialThread =
+    getCachedThread(initialData?.thread?.id ?? "") ??
+    initialData?.thread ??
+    null;
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const showToast = useToaster();
   const showModal = useModal();
-  const [sidebarData, setSidebarData] = useState<SidebarData>(EMPTY_SIDEBAR);
+  const [sidebarData, setSidebarData] = useState<SidebarData>(() => {
+    return getCachedSidebar() ?? initialData?.sidebar ?? EMPTY_SIDEBAR;
+  });
   const [sidebarSelection, setSidebarSelection] =
-    useState<SidebarSelection | null>(null);
+    useState<SidebarSelection | null>(() =>
+      initialThread
+        ? {
+            type: "thread",
+            threadId: initialThread.id,
+            projectId: initialThread.projectId,
+          }
+        : null,
+    );
   const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(
-    new Set(),
+    () => new Set(initialThread?.projectId ? [initialThread.projectId] : []),
   );
   const [creatingProject, setCreatingProject] = useState(false);
-  const [activeThread, setActiveThread] = useState<ThreadPayload | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [activeThread, setActiveThread] = useState<ThreadPayload | null>(
+    () => initialThread,
+  );
+  const [messages, setMessages] = useState<ChatMessage[]>(
+    () => initialThread?.messages ?? [],
+  );
   const [inputState, setInputState] = useState(ChatInputState.READY);
   const messageListRef = useRef<HTMLDivElement>(null);
   const streamsRef = useRef<Map<string, EventSource>>(new Map());
-  const threadCacheRef = useRef<Map<string, ThreadPayload>>(new Map());
+  const threadCacheRef = useRef<Map<string, ThreadPayload>>(
+    new Map(initialThread ? [[initialThread.id, initialThread]] : []),
+  );
 
   useEffect(() => {
     return () => {
@@ -177,6 +211,7 @@ function ChatPageContent() {
 
   function cacheThread(thread: ThreadPayload): void {
     threadCacheRef.current.set(thread.id, thread);
+    setCachedThread(thread);
   }
 
   function applyThread(thread: ThreadPayload): void {
@@ -220,7 +255,53 @@ function ChatPageContent() {
       archived: nextSidebar.archived ?? { projects: [], standalone: [] },
     };
     setSidebarData(normalized);
+    setCachedSidebar(normalized);
     return normalized;
+  }
+
+  /**
+   * Moves a newly active thread to the top of its sidebar group without
+   * rebuilding the complete sidebar from the database after every message.
+   */
+  function upsertSidebarThread(
+    thread: Pick<ThreadPayload, "id" | "title" | "projectId">,
+  ): void {
+    setSidebarData((current) => {
+      const summary = { id: thread.id, title: thread.title };
+      let next: SidebarData;
+
+      if (thread.projectId) {
+        const updateProject = (project: SidebarProject): SidebarProject =>
+          project.id === thread.projectId
+            ? {
+                ...project,
+                threads: [
+                  summary,
+                  ...project.threads.filter((item) => item.id !== thread.id),
+                ],
+              }
+            : project;
+        next = {
+          ...current,
+          projects: current.projects.map(updateProject),
+          archived: {
+            ...current.archived,
+            projects: current.archived.projects.map(updateProject),
+          },
+        };
+      } else {
+        next = {
+          ...current,
+          standalone: [
+            summary,
+            ...current.standalone.filter((item) => item.id !== thread.id),
+          ],
+        };
+      }
+
+      setCachedSidebar(next);
+      return next;
+    });
   }
 
   function clearActivePane(): void {
@@ -278,6 +359,7 @@ function ChatPageContent() {
                   );
                 }
                 threadCacheRef.current.delete(threadId);
+                deleteCachedThread(threadId);
               } catch (error) {
                 showActionError("Rename failed", error);
               }
@@ -334,6 +416,7 @@ function ChatPageContent() {
 
       const sidebar = await loadSidebar();
       threadCacheRef.current.delete(threadId);
+      deleteCachedThread(threadId);
 
       if (activeThread?.id === threadId) {
         await selectFallbackThread(sidebar);
@@ -379,6 +462,7 @@ function ChatPageContent() {
 
                 const sidebar = await loadSidebar();
                 threadCacheRef.current.delete(threadId);
+                deleteCachedThread(threadId);
 
                 if (activeThread?.id === threadId) {
                   await selectFallbackThread(sidebar);
@@ -468,6 +552,7 @@ function ChatPageContent() {
                   const cached = threadCacheRef.current.get(threadId);
                   if (cached?.projectId === projectId) {
                     threadCacheRef.current.delete(threadId);
+                    deleteCachedThread(threadId);
                   }
                 }
 
@@ -525,7 +610,6 @@ function ChatPageContent() {
       stream.close();
       streamsRef.current.delete(messageId);
       setInputState(ChatInputState.READY);
-      void loadSidebar();
     }
 
     stream.addEventListener("done", finish);
@@ -540,11 +624,16 @@ function ChatPageContent() {
     });
   }
 
+  /**
+   * Shows a cached thread immediately, then reconciles it with the server.
+   * A missing server record removes stale local data through the caller's
+   * normal error handling path.
+   */
   async function loadThread(threadId: string): Promise<void> {
-    const cached = threadCacheRef.current.get(threadId);
+    const cached =
+      threadCacheRef.current.get(threadId) ?? getCachedThread(threadId);
     if (cached) {
       applyThread(cached);
-      return;
     }
 
     const response = await fetch(`/api/chat/threads/${threadId}`);
@@ -558,6 +647,10 @@ function ChatPageContent() {
   }
 
   function selectThread(threadId: string, _projectId: string | null): void {
+    flushAppCachePersistence();
+    router.replace(`/chat?thread=${encodeURIComponent(threadId)}`, {
+      scroll: false,
+    });
     void loadThread(threadId);
   }
 
@@ -604,9 +697,24 @@ function ChatPageContent() {
     }
   }
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: load initial thread list once
+  // biome-ignore lint/correctness/useExhaustiveDependencies: bootstrap once from server payload
   useEffect(() => {
-    void loadInitialChat().catch(() => {
+    const requestedThreadId = searchParams.get("thread");
+    const initialThread = initialData?.thread;
+
+    if (initialThread) {
+      cacheThread(initialThread);
+    }
+
+    const load = requestedThreadId
+      ? loadThread(requestedThreadId)
+      : initialThread
+        ? Promise.all([loadSidebar(), loadThread(initialThread.id)]).then(
+            () => undefined,
+          )
+        : loadInitialChat();
+
+    void load.catch(() => {
       showToast({
         title: "Chat unavailable",
         description: "Could not load your chat threads.",
@@ -671,47 +779,28 @@ function ChatPageContent() {
         return updatedMessages;
       });
 
-      const sidebar = await loadSidebar();
-      const createdThread =
-        sidebar.standalone.find((thread) => thread.id === result.threadId) ??
-        sidebar.projects
-          .flatMap((project) => project.threads)
-          .find((thread) => thread.id === result.threadId) ??
-        sidebar.archived.standalone.find(
-          (thread) => thread.id === result.threadId,
-        ) ??
-        sidebar.archived.projects
-          .flatMap((project) => project.threads)
-          .find((thread) => thread.id === result.threadId);
-
-      const threadResponse = await fetch(
-        `/api/chat/threads/${result.threadId}`,
-      );
-      const threadPayload = threadResponse.ok
-        ? ((await threadResponse.json()) as ThreadPayload)
-        : null;
-
       const currentThread =
         activeThread?.id === result.threadId
           ? activeThread
           : ({
               id: result.threadId,
-              title: createdThread?.title ?? threadPayload?.title ?? "New chat",
-              modelId: threadPayload?.modelId ?? "",
-              projectId: threadPayload?.projectId ?? projectId ?? null,
-              providerId: threadPayload?.providerId ?? null,
-              systemPrompt: threadPayload?.systemPrompt ?? "",
+              title: result.thread.title,
+              modelId: result.thread.modelId,
+              projectId: result.thread.projectId,
+              providerId: result.thread.providerId,
+              systemPrompt: "",
               messages: [],
             } satisfies ThreadPayload);
 
       const updatedThread: ThreadPayload = {
         ...currentThread,
-        title: createdThread?.title ?? currentThread.title,
-        modelId: threadPayload?.modelId ?? currentThread.modelId,
-        projectId: threadPayload?.projectId ?? currentThread.projectId,
+        title: result.thread.title,
+        modelId: result.thread.modelId,
+        projectId: result.thread.projectId,
         messages: updatedMessages,
       };
 
+      upsertSidebarThread(updatedThread);
       setActiveThread(updatedThread);
       setSidebarSelection({
         type: "thread",
