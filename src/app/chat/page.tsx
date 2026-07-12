@@ -1,34 +1,25 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-import { ChatThread } from "@/components/chat/ChatThread";
-import { Button } from "@/components/lib/button/Button";
+import {
+  ChatSidebar,
+  type SidebarProject,
+  type SidebarSelection,
+  type SidebarStandaloneThread,
+} from "@/components/chat/ChatSidebar";
 import { ChatInput } from "@/components/lib/chat-input/ChatInput";
 import { ChatInputState } from "@/components/lib/chat-input/enums";
 import {
   AssistantMessageBlip,
   UserMessageBlip,
 } from "@/components/lib/message-blip";
-import {
-  Sidebar,
-  SidebarProvider,
-  SidebarToggle,
-  useSidebar,
-} from "@/components/lib/sidebar";
+import { SidebarProvider, SidebarToggle } from "@/components/lib/sidebar";
 import { ToastPlacement } from "@/hooks/use-toaster/types";
 import { useToaster } from "@/hooks/use-toaster/use-toaster";
-import { IconNames } from "@/lib/IconNames";
 import { Intent } from "@/lib/Intent";
 
 import styles from "./chat.module.css";
-
-type ThreadSummary = {
-  id: string;
-  title: string;
-  modelId: string;
-};
 
 type ChatMessage = {
   id: string;
@@ -39,10 +30,19 @@ type ChatMessage = {
   createdAt: string;
 };
 
-type ThreadPayload = ThreadSummary & {
+type ThreadPayload = {
+  id: string;
+  title: string;
+  modelId: string;
+  projectId: string | null;
   providerId: string | null;
   systemPrompt: string;
   messages: ChatMessage[];
+};
+
+type SidebarData = {
+  projects: SidebarProject[];
+  standalone: SidebarStandaloneThread[];
 };
 
 type SendMessageResponse = {
@@ -62,40 +62,32 @@ function createOptimisticUserMessage(content: string): ChatMessage {
   };
 }
 
-function SidebarThreads({
-  threads,
-  activeThreadId,
-  onSelectThread,
-}: {
-  threads: ThreadSummary[];
-  activeThreadId: string | null;
-  onSelectThread: (threadId: string) => void;
-}) {
-  const { notifyItemSelected } = useSidebar();
+function getProjectIdFromSelection(
+  selection: SidebarSelection | null,
+): string | null {
+  if (!selection) {
+    return null;
+  }
 
-  return (
-    <>
-      {threads.map((thread) => (
-        <ChatThread
-          key={thread.id}
-          id={thread.id}
-          title={thread.title}
-          selected={thread.id === activeThreadId}
-          onSelect={() => {
-            onSelectThread(thread.id);
-            notifyItemSelected();
-          }}
-        />
-      ))}
-    </>
-  );
+  if (selection.type === "project") {
+    return selection.projectId;
+  }
+
+  return selection.projectId;
 }
 
 function ChatPageContent() {
-  const router = useRouter();
   const showToast = useToaster();
-  const { notifyItemSelected } = useSidebar();
-  const [threads, setThreads] = useState<ThreadSummary[]>([]);
+  const [sidebarData, setSidebarData] = useState<SidebarData>({
+    projects: [],
+    standalone: [],
+  });
+  const [sidebarSelection, setSidebarSelection] =
+    useState<SidebarSelection | null>(null);
+  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [creatingProject, setCreatingProject] = useState(false);
   const [activeThread, setActiveThread] = useState<ThreadPayload | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputState, setInputState] = useState(ChatInputState.READY);
@@ -139,6 +131,16 @@ function ChatPageContent() {
   function applyThread(thread: ThreadPayload): void {
     setActiveThread(thread);
     setMessages(thread.messages);
+    setSidebarSelection({
+      type: "thread",
+      threadId: thread.id,
+      projectId: thread.projectId,
+    });
+
+    if (thread.projectId) {
+      const projectId = thread.projectId;
+      setExpandedProjectIds((current) => new Set(current).add(projectId));
+    }
 
     let hasStreamingMessage = false;
     for (const message of thread.messages) {
@@ -154,15 +156,15 @@ function ChatPageContent() {
     }
   }
 
-  async function loadThreads(): Promise<ThreadSummary[]> {
-    const response = await fetch("/api/chat/threads");
+  async function loadSidebar(): Promise<SidebarData> {
+    const response = await fetch("/api/chat/threads?view=sidebar");
     if (!response.ok) {
-      throw new Error("Failed to load threads");
+      throw new Error("Failed to load sidebar");
     }
 
-    const nextThreads = (await response.json()) as ThreadSummary[];
-    setThreads(nextThreads);
-    return nextThreads;
+    const nextSidebar = (await response.json()) as SidebarData;
+    setSidebarData(nextSidebar);
+    return nextSidebar;
   }
 
   function connectAssistantStream(threadId: string, messageId: string): void {
@@ -190,6 +192,7 @@ function ChatPageContent() {
       stream.close();
       streamsRef.current.delete(messageId);
       setInputState(ChatInputState.READY);
+      void loadSidebar();
     }
 
     stream.addEventListener("done", finish);
@@ -221,15 +224,50 @@ function ChatPageContent() {
     applyThread(thread);
   }
 
-  function selectThread(threadId: string): void {
+  function selectThread(threadId: string, _projectId: string | null): void {
     void loadThread(threadId);
   }
 
-  async function loadInitialChat(): Promise<void> {
-    const nextThreads = await loadThreads();
+  function selectProject(projectId: string): void {
+    const isAlreadySelected =
+      sidebarSelection?.type === "project" &&
+      sidebarSelection.projectId === projectId;
 
-    if (nextThreads[0]) {
-      await loadThread(nextThreads[0].id);
+    setExpandedProjectIds((current) => {
+      const next = new Set(current);
+      if (isAlreadySelected) {
+        if (next.has(projectId)) {
+          next.delete(projectId);
+        } else {
+          next.add(projectId);
+        }
+        return next;
+      }
+
+      next.add(projectId);
+      return next;
+    });
+
+    if (isAlreadySelected) {
+      return;
+    }
+
+    setActiveThread(null);
+    setMessages([]);
+    setInputState(ChatInputState.READY);
+    setSidebarSelection({ type: "project", projectId });
+  }
+
+  async function loadInitialChat(): Promise<void> {
+    const sidebar = await loadSidebar();
+    const firstStandalone = sidebar.standalone[0];
+    const firstProjectThread = sidebar.projects.find(
+      (project) => project.threads.length > 0,
+    )?.threads[0];
+
+    const firstThreadId = firstStandalone?.id ?? firstProjectThread?.id;
+    if (firstThreadId) {
+      await loadThread(firstThreadId);
     }
   }
 
@@ -245,11 +283,21 @@ function ChatPageContent() {
     });
   }, [showToast]);
 
+  function getActiveProjectId(): string | null {
+    if (activeThread?.projectId) {
+      return activeThread.projectId;
+    }
+
+    return getProjectIdFromSelection(sidebarSelection);
+  }
+
   async function handleSubmit(text: string): Promise<void> {
     const trimmed = text.trim();
     if (!trimmed || inputState !== ChatInputState.READY) {
       return;
     }
+
+    const projectId = getActiveProjectId() ?? undefined;
 
     setInputState(ChatInputState.WAITING);
     const optimisticUserMessage = createOptimisticUserMessage(trimmed);
@@ -262,7 +310,10 @@ function ChatPageContent() {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: trimmed }),
+        body: JSON.stringify({
+          content: trimmed,
+          ...(projectId ? { projectId } : {}),
+        }),
       });
 
       if (!response.ok) {
@@ -287,30 +338,47 @@ function ChatPageContent() {
         return updatedMessages;
       });
 
-      const loadedThreads = await loadThreads();
-      const createdThread = loadedThreads.find(
-        (thread) => thread.id === result.threadId,
+      const sidebar = await loadSidebar();
+      const createdThread =
+        sidebar.standalone.find((thread) => thread.id === result.threadId) ??
+        sidebar.projects
+          .flatMap((project) => project.threads)
+          .find((thread) => thread.id === result.threadId);
+
+      const threadResponse = await fetch(
+        `/api/chat/threads/${result.threadId}`,
       );
+      const threadPayload = threadResponse.ok
+        ? ((await threadResponse.json()) as ThreadPayload)
+        : null;
+
       const currentThread =
         activeThread?.id === result.threadId
           ? activeThread
           : ({
               id: result.threadId,
-              title: createdThread?.title ?? "New chat",
-              modelId: createdThread?.modelId ?? "",
-              providerId: null,
-              systemPrompt: "",
+              title: createdThread?.title ?? threadPayload?.title ?? "New chat",
+              modelId: threadPayload?.modelId ?? "",
+              projectId: threadPayload?.projectId ?? projectId ?? null,
+              providerId: threadPayload?.providerId ?? null,
+              systemPrompt: threadPayload?.systemPrompt ?? "",
               messages: [],
             } satisfies ThreadPayload);
 
       const updatedThread: ThreadPayload = {
         ...currentThread,
         title: createdThread?.title ?? currentThread.title,
-        modelId: createdThread?.modelId ?? currentThread.modelId,
+        modelId: threadPayload?.modelId ?? currentThread.modelId,
+        projectId: threadPayload?.projectId ?? currentThread.projectId,
         messages: updatedMessages,
       };
 
       setActiveThread(updatedThread);
+      setSidebarSelection({
+        type: "thread",
+        threadId: updatedThread.id,
+        projectId: updatedThread.projectId,
+      });
       cacheThread(updatedThread);
       setInputState(ChatInputState.STREAMING);
       connectAssistantStream(result.threadId, result.assistantMessage.id);
@@ -331,61 +399,89 @@ function ChatPageContent() {
     }
   }
 
-  async function startNewChat(): Promise<void> {
+  function startNewChat(): void {
+    const projectId = getProjectIdFromSelection(sidebarSelection);
+
     setActiveThread(null);
     setMessages([]);
     setInputState(ChatInputState.READY);
+
+    if (projectId) {
+      setSidebarSelection({ type: "project", projectId });
+      setExpandedProjectIds((current) => new Set(current).add(projectId));
+      return;
+    }
+
+    setSidebarSelection(null);
   }
+
+  async function createProject(): Promise<void> {
+    setCreatingProject(true);
+    try {
+      const response = await fetch("/api/chat/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "New project" }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Project could not be created");
+      }
+
+      const project = (await response.json()) as SidebarProject;
+      await loadSidebar();
+      setExpandedProjectIds((current) => new Set(current).add(project.id));
+      setActiveThread(null);
+      setMessages([]);
+      setInputState(ChatInputState.READY);
+      setSidebarSelection({ type: "project", projectId: project.id });
+    } catch (error) {
+      showToast({
+        title: "Project failed",
+        description:
+          error instanceof Error ? error.message : "Could not create project.",
+        intent: Intent.DANGER,
+        placement: ToastPlacement.BOTTOM_RIGHT,
+      });
+    } finally {
+      setCreatingProject(false);
+    }
+  }
+
+  const headerTitle = activeThread
+    ? `${activeThread.title} · ${activeThread.modelId}`
+    : sidebarSelection?.type === "project"
+      ? `${sidebarData.projects.find((project) => project.id === sidebarSelection.projectId)?.title ?? "Project"} · New chat`
+      : "New chat";
+
+  const activeProjectId = getActiveProjectId();
 
   return (
     <div className={styles.shell}>
-      <Sidebar
-        footer={
-          <div className={styles.sidebarFooter}>
-            <Button
-              text="New chat"
-              leftIcon={IconNames["add-line"]}
-              intent={Intent.SECONDARY}
-              style={{ justifyContent: "flex-start" }}
-              onClick={() => {
-                notifyItemSelected();
-                void startNewChat();
-              }}
-            />
-            <Button
-              text="Settings"
-              leftIcon={IconNames["settings-3-line"]}
-              intent={Intent.TERTIARY}
-              style={{ justifyContent: "flex-start" }}
-              onClick={() => {
-                notifyItemSelected();
-                router.push("/settings");
-              }}
-            />
-          </div>
-        }
-      >
-        <SidebarThreads
-          threads={threads}
-          activeThreadId={activeThread?.id ?? null}
-          onSelectThread={selectThread}
-        />
-      </Sidebar>
+      <ChatSidebar
+        projects={sidebarData.projects}
+        standaloneThreads={sidebarData.standalone}
+        selection={sidebarSelection}
+        expandedProjectIds={expandedProjectIds}
+        creatingProject={creatingProject}
+        onSelectThread={selectThread}
+        onSelectProject={selectProject}
+        onNewChat={startNewChat}
+        onNewProject={() => void createProject()}
+      />
 
       <main className={styles.chatView}>
         <header className={styles.header}>
           <SidebarToggle />
-          <span className={styles.headerTitle}>
-            {activeThread
-              ? `${activeThread.title} · ${activeThread.modelId}`
-              : "New chat"}
-          </span>
+          <span className={styles.headerTitle}>{headerTitle}</span>
         </header>
 
         <div ref={messageListRef} className={styles.messageList}>
           {messages.length === 0 ? (
             <div className={styles.emptyChat}>
-              Add providers in Settings, choose a model, then start a chat.
+              Add providers in Settings, choose a model
+              {activeProjectId ? " and embedding model" : ""}, then start a
+              chat.
             </div>
           ) : (
             messages.map((message) => {

@@ -8,6 +8,7 @@ export type ChatThreadProps = {
   id: string;
   title: string;
   selected?: boolean;
+  iconDisabled?: boolean;
   onSelect: () => void;
   onEdit?: () => void;
   onArchive?: () => void;
@@ -17,6 +18,7 @@ export type ChatThreadProps = {
 export function ChatThread({
   title,
   selected = false,
+  iconDisabled = false,
   onSelect,
   onEdit,
   onArchive,
@@ -49,7 +51,7 @@ export function ChatThread({
   return (
     <Thread
       text={title}
-      leftIcon={IconNames["chat-3-line"]}
+      leftIcon={iconDisabled ? undefined : IconNames["chat-3-line"]}
       selected={selected}
       onSelect={onSelect}
       actions={actions}

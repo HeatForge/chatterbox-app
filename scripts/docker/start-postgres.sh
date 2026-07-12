@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 ENV_FILE="$PROJECT_ROOT/.env"
 CONTAINER_NAME="chatterbox-postgres"
-IMAGE="postgres:17"
+IMAGE="pgvector/pgvector:pg17"
 MAX_WAIT_SECONDS=60
 
 usage() {

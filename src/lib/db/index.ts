@@ -21,4 +21,11 @@ export type {
   NewChatMessage,
   NewChatThread,
   NewMessage,
+  NewProject,
+  NewProjectEmbedding,
+  Project,
+  ProjectEmbedding,
+  ProjectEmbeddingsTable,
+  ProjectsTable,
+  ProjectUpdate,
 } from "./schema";

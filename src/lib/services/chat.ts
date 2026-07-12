@@ -7,11 +7,14 @@ import {
   getPreferredModel,
 } from "@/lib/services/ai-providers";
 import { BadRequestError, NotFoundError } from "@/lib/services/api-errors";
+import { getProject } from "@/lib/services/projects";
+import { findRelevantProjectContext, indexMessage } from "@/lib/services/rag";
 
-type ThreadSummary = {
+export type ThreadSummary = {
   id: string;
   title: string;
   modelId: string;
+  projectId: string | null;
   providerId: string | null;
   createdAt: string;
   updatedAt: string;
@@ -46,6 +49,7 @@ function toThreadSummary(thread: ChatThread): ThreadSummary {
     id: thread.id,
     title: thread.title,
     modelId: thread.model_id,
+    projectId: thread.project_id,
     providerId: thread.provider_id,
     createdAt: thread.created_at.toISOString(),
     updatedAt: thread.updated_at.toISOString(),
@@ -96,6 +100,47 @@ async function getThreadMessages(threadId: string): Promise<ChatMessage[]> {
     .execute();
 }
 
+function indexMessageSafely(
+  userId: string,
+  input: {
+    projectId: string;
+    threadId: string;
+    messageId: string;
+    content: string;
+  },
+): void {
+  void indexMessage(userId, input).catch((error: unknown) => {
+    console.error("Failed to index message for RAG", error);
+  });
+}
+
+async function buildSystemPrompt(
+  userId: string,
+  thread: ChatThread,
+  userQuery: string,
+): Promise<string> {
+  if (!thread.project_id) {
+    return thread.system_prompt;
+  }
+
+  const chunks = await findRelevantProjectContext(userId, {
+    projectId: thread.project_id,
+    query: userQuery,
+    excludeThreadId: thread.id,
+  });
+
+  console.log("[buildSystemPrompt] Chunks: ", JSON.stringify(chunks));
+  if (chunks.length === 0) {
+    return thread.system_prompt;
+  }
+
+  const contextBlock = chunks.map((chunk) => `- ${chunk.content}`).join("\n");
+  return `${thread.system_prompt}
+
+Use the following retrieved context from other chats in this project when relevant:
+${contextBlock}`;
+}
+
 export async function listThreads(userId: string): Promise<ThreadSummary[]> {
   const threads = await db
     .selectFrom("chat_threads")
@@ -108,21 +153,34 @@ export async function listThreads(userId: string): Promise<ThreadSummary[]> {
 
 export async function createThread(
   userId: string,
-  firstMessage?: string,
+  input?: { firstMessage?: string; projectId?: string },
 ): Promise<ChatThreadPayload> {
+  if (input?.projectId) {
+    await getProject(userId, input.projectId);
+  }
+
   const preferred = await getPreferredModel(userId);
   const thread = await db
     .insertInto("chat_threads")
     .values({
       id: nanoid(),
       user_id: userId,
-      title: firstMessage ? makeTitle(firstMessage) : "New chat",
+      project_id: input?.projectId ?? null,
+      title: input?.firstMessage ? makeTitle(input.firstMessage) : "New chat",
       provider_id: preferred.providerId,
       model_id: preferred.modelId,
       system_prompt: preferred.systemPrompt,
     })
     .returningAll()
     .executeTakeFirstOrThrow();
+
+  if (input?.projectId) {
+    await db
+      .updateTable("projects")
+      .set({ updated_at: new Date() })
+      .where("id", "=", input.projectId)
+      .execute();
+  }
 
   return {
     ...toThreadSummary(thread),
@@ -221,6 +279,7 @@ function startAssistantGeneration(
   userId: string,
   thread: ChatThread,
   assistantMessageId: string,
+  userQuery: string,
 ): void {
   if (generationRegistry.has(assistantMessageId)) {
     return;
@@ -231,14 +290,15 @@ function startAssistantGeneration(
       throw new BadRequestError("Thread does not have a provider");
     }
 
-    const [model, messages] = await Promise.all([
+    const [model, messages, system] = await Promise.all([
       getGenerationModel(userId, thread.provider_id, thread.model_id),
       getThreadMessages(thread.id),
+      buildSystemPrompt(userId, thread, userQuery),
     ]);
 
     const result = streamText({
       model,
-      system: thread.system_prompt,
+      system,
       messages: toModelMessages(messages),
     });
 
@@ -252,6 +312,15 @@ function startAssistantGeneration(
       throw new Error("Model returned an empty response");
     }
     await finishAssistantMessage(assistantMessageId, "completed");
+
+    if (thread.project_id) {
+      indexMessageSafely(userId, {
+        projectId: thread.project_id,
+        threadId: thread.id,
+        messageId: assistantMessageId,
+        content,
+      });
+    }
   })()
     .catch(async (error: unknown) => {
       const message =
@@ -267,7 +336,7 @@ function startAssistantGeneration(
 
 export async function sendMessage(
   userId: string,
-  input: { threadId?: string; content: string },
+  input: { threadId?: string; content: string; projectId?: string },
 ) {
   const content = input.content.trim();
   if (!content) {
@@ -276,9 +345,10 @@ export async function sendMessage(
 
   const thread = input.threadId
     ? await getUserThread(userId, input.threadId)
-    : await createThread(userId, content).then((payload) =>
-        getUserThread(userId, payload.id),
-      );
+    : await createThread(userId, {
+        firstMessage: content,
+        projectId: input.projectId,
+      }).then((payload) => getUserThread(userId, payload.id));
 
   const [userMessage, assistantMessage] = await db
     .transaction()
@@ -319,10 +389,27 @@ export async function sendMessage(
         .where("id", "=", thread.id)
         .execute();
 
+      if (thread.project_id) {
+        await trx
+          .updateTable("projects")
+          .set({ updated_at: new Date() })
+          .where("id", "=", thread.project_id)
+          .execute();
+      }
+
       return [userRow, assistantRow] as const;
     });
 
-  startAssistantGeneration(userId, thread, assistantMessage.id);
+  if (thread.project_id) {
+    indexMessageSafely(userId, {
+      projectId: thread.project_id,
+      threadId: thread.id,
+      messageId: userMessage.id,
+      content,
+    });
+  }
+
+  startAssistantGeneration(userId, thread, assistantMessage.id, content);
 
   return {
     threadId: thread.id,
@@ -401,3 +488,5 @@ export async function createAssistantMessageStream(
     },
   });
 }
+
+export { listSidebarThreads } from "@/lib/services/projects";

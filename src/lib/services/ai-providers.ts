@@ -2,7 +2,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createMistral } from "@ai-sdk/mistral";
 import { createOpenAI } from "@ai-sdk/openai";
-import type { LanguageModel } from "ai";
+import type { EmbeddingModel, LanguageModel } from "ai";
 import { nanoid } from "nanoid";
 
 import {
@@ -18,6 +18,50 @@ export {
   type ProviderKey,
   providerKeys,
 } from "@/lib/ai/provider-catalog";
+
+export const EMBEDDING_DIMENSIONS = 1536;
+
+const KNOWN_1536_EMBEDDING_MODELS = new Set([
+  "text-embedding-3-small",
+  "text-embedding-ada-002",
+]);
+
+export function isEmbeddingModel(modelId: string): boolean {
+  const normalized = modelId.toLowerCase();
+  return (
+    /embed/i.test(normalized) ||
+    KNOWN_1536_EMBEDDING_MODELS.has(modelId) ||
+    normalized.endsWith("/text-embedding-3-small") ||
+    normalized.endsWith("/text-embedding-ada-002")
+  );
+}
+
+export function isSupportedEmbeddingModel(
+  modelId: string,
+  options?: { fromEmbeddingEndpoint?: boolean },
+): boolean {
+  if (/text-embedding-3-large/i.test(modelId)) {
+    return false;
+  }
+
+  const baseId = modelId.includes("/")
+    ? (modelId.split("/").pop() ?? modelId)
+    : modelId;
+
+  if (
+    KNOWN_1536_EMBEDDING_MODELS.has(baseId) ||
+    /text-embedding-3-small/i.test(modelId) ||
+    /text-embedding-ada-002/i.test(modelId)
+  ) {
+    return true;
+  }
+
+  if (options?.fromEmbeddingEndpoint) {
+    return false;
+  }
+
+  return isEmbeddingModel(modelId);
+}
 
 export const DEFAULT_SYSTEM_PROMPT =
   "You are a helpful AI assistant. Be concise, accurate, and friendly in your responses.";
@@ -72,6 +116,27 @@ function authHeaders(provider: AiProvider): HeadersInit {
   return { Authorization: `Bearer ${provider.api_key}` };
 }
 
+function buildModelsUrl(
+  endpoint: string,
+  providerKey: ProviderKey,
+  query?: string,
+): string {
+  if (providerKey === "google") {
+    return endpoint;
+  }
+
+  if (!query) {
+    return endpoint;
+  }
+
+  const separator = endpoint.includes("?") ? "&" : "?";
+  return `${endpoint}${separator}${query}`;
+}
+
+function isOpenRouterProvider(providerKey: ProviderKey): boolean {
+  return providerKey === "openrouter";
+}
+
 function extractModels(payload: unknown, providerKey: string): RemoteModel[] {
   if (!payload || typeof payload !== "object") {
     return [];
@@ -106,12 +171,12 @@ function extractModels(payload: unknown, providerKey: string): RemoteModel[] {
 
       const id = rawId.replace(/^models\//, "");
       const displayName =
-        typeof model.display_name === "string"
-          ? model.display_name
-          : typeof model.displayName === "string"
-            ? model.displayName
-            : typeof model.name === "string" && providerKey !== "google"
-              ? model.name
+        typeof model.name === "string"
+          ? model.name
+          : typeof model.display_name === "string"
+            ? model.display_name
+            : typeof model.displayName === "string"
+              ? model.displayName
               : id;
 
       return { id, label: displayName };
@@ -119,8 +184,12 @@ function extractModels(payload: unknown, providerKey: string): RemoteModel[] {
     .filter((model): model is RemoteModel => Boolean(model));
 }
 
-async function fetchModels(provider: AiProvider): Promise<RemoteModel[]> {
+async function fetchModelsFromEndpoint(
+  provider: AiProvider,
+  query?: string,
+): Promise<RemoteModel[]> {
   const catalogItem = getCatalogItem(provider.provider_key);
+  const providerKey = assertProviderKey(provider.provider_key);
   const endpoint = provider.base_url
     ? `${provider.base_url.replace(/\/$/, "")}/models`
     : catalogItem.modelEndpoint;
@@ -132,7 +201,7 @@ async function fetchModels(provider: AiProvider): Promise<RemoteModel[]> {
   const url =
     provider.provider_key === "google"
       ? `${endpoint}?key=${encodeURIComponent(provider.api_key)}`
-      : endpoint;
+      : buildModelsUrl(endpoint, providerKey, query);
 
   const response = await fetch(url, {
     headers:
@@ -146,6 +215,39 @@ async function fetchModels(provider: AiProvider): Promise<RemoteModel[]> {
   }
 
   return extractModels(await response.json(), provider.provider_key);
+}
+
+async function fetchModels(provider: AiProvider): Promise<RemoteModel[]> {
+  const providerKey = assertProviderKey(provider.provider_key);
+  const query = isOpenRouterProvider(providerKey)
+    ? "output_modalities=text"
+    : undefined;
+
+  const models = await fetchModelsFromEndpoint(provider, query);
+  if (query) {
+    return models;
+  }
+
+  return models.filter((model) => !isEmbeddingModel(model.id));
+}
+
+async function fetchEmbeddingModels(
+  provider: AiProvider,
+): Promise<RemoteModel[]> {
+  const providerKey = assertProviderKey(provider.provider_key);
+
+  if (isOpenRouterProvider(providerKey)) {
+    const models = await fetchModelsFromEndpoint(
+      provider,
+      "output_modalities=embeddings",
+    );
+    return models.filter((model) =>
+      isSupportedEmbeddingModel(model.id, { fromEmbeddingEndpoint: true }),
+    );
+  }
+
+  const models = await fetchModelsFromEndpoint(provider);
+  return models.filter((model) => isSupportedEmbeddingModel(model.id));
 }
 
 function summarizeProvider(
@@ -194,6 +296,7 @@ async function listUserProviders(userId: string): Promise<AiProvider[]> {
 type ProviderWithModels = {
   provider: AiProvider;
   models: RemoteModel[];
+  embeddingModels: RemoteModel[];
 };
 
 async function fetchProvidersWithModels(
@@ -203,6 +306,7 @@ async function fetchProvidersWithModels(
     providers.map(async (provider) => ({
       provider,
       models: await fetchModels(provider),
+      embeddingModels: await fetchEmbeddingModels(provider),
     })),
   );
 
@@ -211,10 +315,11 @@ async function fetchProvidersWithModels(
   );
 }
 
-function toModelOptions({
-  provider,
-  models,
-}: ProviderWithModels): ModelOption[] {
+function toModelOptions(
+  providerWithModels: ProviderWithModels,
+  models: RemoteModel[],
+): ModelOption[] {
+  const { provider } = providerWithModels;
   return models.map((model) => ({
     providerId: provider.id,
     providerName: provider.display_name,
@@ -248,7 +353,9 @@ export async function listModelOptions(userId: string): Promise<ModelOption[]> {
   const providersWithModels = await fetchProvidersWithModels(providers);
 
   return providersWithModels
-    .flatMap(toModelOptions)
+    .flatMap((providerWithModels) =>
+      toModelOptions(providerWithModels, providerWithModels.models),
+    )
     .sort((left, right) => left.label.localeCompare(right.label));
 }
 
@@ -257,9 +364,12 @@ export type AiSettingsConfig = {
     systemPrompt: string;
     preferredProviderId: string | null;
     preferredModelId: string | null;
+    preferredEmbeddingProviderId: string | null;
+    preferredEmbeddingModelId: string | null;
   };
   providers: ProviderSummary[];
   models: ModelOption[];
+  embeddingModels: ModelOption[];
 };
 
 export async function getAiSettingsConfig(
@@ -282,13 +392,23 @@ export async function getAiSettingsConfig(
       systemPrompt: settings.system_prompt,
       preferredProviderId: settings.preferred_provider_id,
       preferredModelId: settings.preferred_model_id,
+      preferredEmbeddingProviderId: settings.preferred_embedding_provider_id,
+      preferredEmbeddingModelId: settings.preferred_embedding_model_id,
     },
     providers: providers.map((provider) =>
       summarizeProvider(provider, modelCountByProvider),
     ),
     models: providersWithModels
       .filter(({ provider }) => provider.enabled)
-      .flatMap(toModelOptions)
+      .flatMap((providerWithModels) =>
+        toModelOptions(providerWithModels, providerWithModels.models),
+      )
+      .sort((left, right) => left.label.localeCompare(right.label)),
+    embeddingModels: providersWithModels
+      .filter(({ provider }) => provider.enabled)
+      .flatMap((providerWithModels) =>
+        toModelOptions(providerWithModels, providerWithModels.embeddingModels),
+      )
       .sort((left, right) => left.label.localeCompare(right.label)),
   };
 }
@@ -299,6 +419,8 @@ export async function updateAiSettings(
     systemPrompt: string;
     preferredProviderId: string | null;
     preferredModelId: string | null;
+    preferredEmbeddingProviderId?: string | null;
+    preferredEmbeddingModelId?: string | null;
   },
 ) {
   await getUserSettings(userId);
@@ -316,12 +438,88 @@ export async function updateAiSettings(
     }
   }
 
+  const embeddingProviderId =
+    input.preferredEmbeddingProviderId !== undefined
+      ? input.preferredEmbeddingProviderId
+      : undefined;
+  const embeddingModelId =
+    input.preferredEmbeddingModelId !== undefined
+      ? input.preferredEmbeddingModelId
+      : undefined;
+
+  if (embeddingProviderId && embeddingModelId) {
+    await validateEmbeddingModel(userId, embeddingProviderId, embeddingModelId);
+  }
+
+  const current = await getUserSettings(userId);
+
   await db
     .updateTable("ai_user_settings")
     .set({
       system_prompt: input.systemPrompt,
       preferred_provider_id: input.preferredProviderId,
       preferred_model_id: input.preferredModelId,
+      preferred_embedding_provider_id:
+        embeddingProviderId !== undefined
+          ? embeddingProviderId
+          : current.preferred_embedding_provider_id,
+      preferred_embedding_model_id:
+        embeddingModelId !== undefined
+          ? embeddingModelId
+          : current.preferred_embedding_model_id,
+      updated_at: new Date(),
+    })
+    .where("user_id", "=", userId)
+    .execute();
+
+  return getAiSettingsConfig(userId);
+}
+
+async function validateEmbeddingModel(
+  userId: string,
+  providerId: string,
+  modelId: string,
+): Promise<void> {
+  if (!isSupportedEmbeddingModel(modelId)) {
+    throw new BadRequestError(
+      "Selected embedding model is not supported (1536 dimensions required)",
+    );
+  }
+
+  const provider = await getUserProvider(userId, providerId);
+
+  if (!provider.enabled) {
+    throw new BadRequestError("Selected embedding provider is disabled");
+  }
+
+  const models = await fetchEmbeddingModels(provider);
+  if (!models.some((model) => model.id === modelId)) {
+    throw new BadRequestError("Selected embedding model is not available");
+  }
+}
+
+export async function updateEmbeddingSettings(
+  userId: string,
+  input: {
+    preferredEmbeddingProviderId: string | null;
+    preferredEmbeddingModelId: string | null;
+  },
+) {
+  await getUserSettings(userId);
+
+  if (input.preferredEmbeddingProviderId && input.preferredEmbeddingModelId) {
+    await validateEmbeddingModel(
+      userId,
+      input.preferredEmbeddingProviderId,
+      input.preferredEmbeddingModelId,
+    );
+  }
+
+  await db
+    .updateTable("ai_user_settings")
+    .set({
+      preferred_embedding_provider_id: input.preferredEmbeddingProviderId,
+      preferred_embedding_model_id: input.preferredEmbeddingModelId,
       updated_at: new Date(),
     })
     .where("user_id", "=", userId)
@@ -464,4 +662,46 @@ export async function getPreferredModel(userId: string) {
     modelId: settings.preferred_model_id,
     systemPrompt: settings.system_prompt,
   };
+}
+
+export async function getPreferredEmbeddingModel(userId: string) {
+  const settings = await getUserSettings(userId);
+
+  if (
+    !settings.preferred_embedding_provider_id ||
+    !settings.preferred_embedding_model_id
+  ) {
+    throw new BadRequestError("Select an embedding model in Settings first");
+  }
+
+  return {
+    providerId: settings.preferred_embedding_provider_id,
+    modelId: settings.preferred_embedding_model_id,
+  };
+}
+
+export async function getEmbeddingModel(
+  userId: string,
+  providerId: string,
+  modelId: string,
+): Promise<EmbeddingModel> {
+  const provider = await getUserProvider(userId, providerId);
+
+  if (!provider.enabled) {
+    throw new BadRequestError("Selected provider is disabled");
+  }
+
+  if (!isSupportedEmbeddingModel(modelId)) {
+    throw new BadRequestError("Unsupported embedding model");
+  }
+
+  const catalogItem = getCatalogItem(provider.provider_key);
+  const baseURL = provider.base_url || catalogItem.baseUrl;
+  const openaiProvider = createOpenAI({
+    apiKey: provider.api_key,
+    baseURL,
+    name: provider.provider_key,
+  });
+
+  return openaiProvider.embedding(modelId);
 }

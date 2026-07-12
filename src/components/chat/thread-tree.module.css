@@ -1,0 +1,58 @@
+.treeList {
+  --tree-icon-size: 22px;
+  --tree-button-padding-inline: 1rem;
+  --tree-line-thickness: 3px;
+  --tree-line-color: color-mix(in srgb, var(--color-text) 38%, transparent);
+  --tree-elbow-width: 1.25rem;
+  --tree-item-gap: 0.5rem;
+
+  list-style: none;
+  margin: 0;
+  margin-left: calc(
+    var(--tree-button-padding-inline) +
+    var(--tree-icon-size) /
+    2 -
+    var(--tree-line-thickness) /
+    2
+  );
+  padding: 0;
+}
+
+.treeItem {
+  position: relative;
+  padding-left: var(--tree-elbow-width);
+  margin-block: var(--tree-item-gap);
+}
+
+.treeItem::before {
+  content: "";
+  position: absolute;
+  top: calc(-1 * var(--tree-item-gap));
+  bottom: 0;
+  left: 0;
+  width: 0;
+  border-left: var(--tree-line-thickness) dotted var(--tree-line-color);
+}
+
+.treeItem::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: var(--tree-elbow-width);
+  height: 0;
+  border-top: var(--tree-line-thickness) dotted var(--tree-line-color);
+  transform: translateY(-50%);
+}
+
+.treeItem:last-child::before {
+  bottom: auto;
+  height: calc(var(--tree-item-gap) + 50%);
+}
+
+.treeItemContent {
+  min-width: 0;
+}
+.treeItemContent button {
+  margin-left: -0.5rem;
+}

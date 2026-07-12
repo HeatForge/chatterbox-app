@@ -57,6 +57,7 @@ export default function SettingsPage() {
   const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
+  const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
@@ -74,6 +75,15 @@ export default function SettingsPage() {
         ? getModelValue({
             providerId: data.settings.preferredProviderId,
             modelId: data.settings.preferredModelId,
+          })
+        : "",
+    );
+    setSelectedEmbeddingModel(
+      data.settings.preferredEmbeddingProviderId &&
+        data.settings.preferredEmbeddingModelId
+        ? getModelValue({
+            providerId: data.settings.preferredEmbeddingProviderId,
+            modelId: data.settings.preferredEmbeddingModelId,
           })
         : "",
     );
@@ -101,6 +111,17 @@ export default function SettingsPage() {
     }
 
     return config.models.map((model) => ({
+      value: getModelValue(model),
+      label: `${model.label} (${model.providerName})`,
+    }));
+  }, [config]);
+
+  const embeddingModelOptions = useMemo(() => {
+    if (!config) {
+      return [];
+    }
+
+    return config.embeddingModels.map((model) => ({
       value: getModelValue(model),
       label: `${model.label} (${model.providerName})`,
     }));
@@ -199,6 +220,32 @@ export default function SettingsPage() {
       showToast({
         title: "Settings saved",
         description: "Your default chat model and system prompt were updated.",
+        intent: Intent.SUCCESS,
+        placement: ToastPlacement.BOTTOM_RIGHT,
+      });
+    });
+  }
+
+  async function saveEmbeddingSettings(): Promise<void> {
+    await runAction("save-embedding-settings", async () => {
+      const model = parseModelValue(selectedEmbeddingModel);
+      const response = await fetch("/api/settings/ai/embedding", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          preferredEmbeddingProviderId: model.providerId,
+          preferredEmbeddingModelId: model.modelId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Embedding settings could not be saved");
+      }
+
+      await loadSettings();
+      showToast({
+        title: "Embedding model saved",
+        description: "Your default embedding model was updated.",
         intent: Intent.SUCCESS,
         placement: ToastPlacement.BOTTOM_RIGHT,
       });
@@ -359,6 +406,41 @@ export default function SettingsPage() {
                     busyAction === "save-settings"
                   }
                   onClick={() => void saveSettings()}
+                />
+              </div>
+
+              <div className={styles.settingGroup}>
+                <label
+                  className={styles.settingLabel}
+                  htmlFor="embedding-model"
+                >
+                  Embedding model
+                </label>
+                <p className={styles.settingHint}>
+                  Required for project chats. Only 1536-dimension embedding
+                  models are supported in this version.
+                </p>
+                {configLoading ? (
+                  <p className={styles.sectionLoading}>Loading models…</p>
+                ) : (
+                  <Select
+                    id="embedding-model"
+                    options={embeddingModelOptions}
+                    value={selectedEmbeddingModel}
+                    onChange={setSelectedEmbeddingModel}
+                    searchable
+                    emptyMessage="Add and enable a provider with embedding models."
+                  />
+                )}
+                <Button
+                  text="Save embedding model"
+                  intent={Intent.PRIMARY}
+                  disabled={
+                    configLoading ||
+                    !selectedEmbeddingModel ||
+                    busyAction === "save-embedding-settings"
+                  }
+                  onClick={() => void saveEmbeddingSettings()}
                 />
               </div>
             </>

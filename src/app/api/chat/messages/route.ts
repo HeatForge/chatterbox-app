@@ -7,6 +7,7 @@ import { getRequiredUserId } from "@/lib/services/session";
 
 const messageSchema = z.object({
   content: z.string().min(1),
+  projectId: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -14,7 +15,10 @@ export async function POST(request: Request) {
     const userId = await getRequiredUserId(request.headers);
     const body = messageSchema.parse(await request.json());
     return NextResponse.json(
-      await sendMessage(userId, { content: body.content }),
+      await sendMessage(userId, {
+        content: body.content,
+        projectId: body.projectId,
+      }),
       {
         status: 201,
       },
