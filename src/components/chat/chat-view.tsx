@@ -4,6 +4,16 @@ import type { UIMessage } from "ai";
 import { nanoid } from "nanoid";
 import { useEffect, useRef, useState } from "react";
 
+import { ToastPlacement } from "@/hooks/use-toaster/types";
+import { useToaster } from "@/hooks/use-toaster/use-toaster";
+import { IconNames } from "@/lib/IconNames";
+import { Intent } from "@/lib/Intent";
+import {
+  DEFAULT_IMAGE_GENERATION_MODEL_ID,
+  IMAGE_GENERATION_MODELS,
+  type ImageGenerationModelId,
+} from "@/lib/image-generation-models";
+import { Button } from "../lib/button/Button";
 import { ChatInput } from "../lib/chat-input/ChatInput";
 import { ChatInputState } from "../lib/chat-input/enums";
 import { AssistantMessageBlip, UserMessageBlip } from "../lib/message-blip";
@@ -13,12 +23,8 @@ import {
   SidebarToggle,
   useSidebar,
 } from "../lib/sidebar";
-import sidebarStyles from "../lib/sidebar/sidebar.module.css";
 import styles from "./chat.module.css";
 import { initialThreads } from "./chat-data";
-import { Button } from "../lib/button/Button";
-import { Intent } from "@/lib/Intent";
-import { IconNames } from "@/lib/IconNames";
 
 const DEMO_THINKING = `The user is asking for food-focused weekend ideas in Portland.
 I should suggest a route that stays walkable and relaxed.
@@ -28,6 +34,26 @@ const INITIAL_MESSAGES: UIMessage[] = [
   ...initialThreads[0].messages.slice(0, 3),
   ...initialThreads[1].messages,
 ];
+
+type GenerateImageResponse = {
+  images: {
+    url: string;
+  }[];
+  modelId: ImageGenerationModelId;
+};
+
+function getApiErrorMessage(payload: unknown): string {
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "error" in payload &&
+    typeof payload.error === "string"
+  ) {
+    return payload.error;
+  }
+
+  return "Image generation failed.";
+}
 
 function createTextMessage(
   role: UIMessage["role"],
@@ -72,11 +98,11 @@ function SidebarThreadPlaceholders() {
   return (
     <>
       {initialThreads.map((thread) => (
-        <Button 
+        <Button
           key={thread.id}
           text={thread.title}
           leftIcon={IconNames["chat-3-line"]}
-          style={{justifyContent: "flex-start"}}
+          style={{ justifyContent: "flex-start" }}
           onClick={() => notifyItemSelected()}
         />
       ))}
@@ -85,11 +111,14 @@ function SidebarThreadPlaceholders() {
 }
 
 function ChatViewContent() {
+  const showToast = useToaster();
   const [messages, setMessages] = useState<UIMessage[]>(INITIAL_MESSAGES);
   const [thinkingById, setThinkingById] = useState<Record<string, string>>({
     m4: DEMO_THINKING,
   });
   const [inputState, setInputState] = useState(ChatInputState.READY);
+  const [selectedImageModelId, setSelectedImageModelId] =
+    useState<ImageGenerationModelId>(DEFAULT_IMAGE_GENERATION_MODEL_ID);
   const messageListRef = useRef<HTMLDivElement>(null);
   const streamAbortRef = useRef(false);
 
@@ -155,6 +184,78 @@ function ChatViewContent() {
     }
   }
 
+  async function handleGenerateImage(prompt: string): Promise<void> {
+    const trimmed = prompt.trim();
+    if (!trimmed || inputState !== ChatInputState.READY) {
+      return;
+    }
+
+    setMessages((current) => [
+      ...current,
+      createTextMessage("user", `Generate an image: ${trimmed}`),
+    ]);
+    setInputState(ChatInputState.WAITING);
+
+    try {
+      const response = await fetch("/api/images/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: trimmed,
+          modelId: selectedImageModelId,
+        }),
+      });
+      const payload = (await response.json()) as unknown;
+
+      if (!response.ok) {
+        throw new Error(getApiErrorMessage(payload));
+      }
+
+      const result = payload as GenerateImageResponse;
+      const image = result.images[0];
+      if (!image?.url) {
+        throw new Error("Image generation did not return an image.");
+      }
+
+      const model = IMAGE_GENERATION_MODELS.find(
+        (item) => item.id === result.modelId,
+      );
+      const content = `Generated with ${model?.label ?? result.modelId}.\n\n![${trimmed}](${image.url})`;
+
+      setMessages((current) => [
+        ...current,
+        createTextMessage("assistant", content),
+      ]);
+      showToast({
+        title: "Image generated",
+        description: model?.label ?? result.modelId,
+        intent: Intent.SUCCESS,
+        placement: ToastPlacement.BOTTOM_RIGHT,
+        duration: 3000,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Image generation failed.";
+      setMessages((current) => [
+        ...current,
+        createTextMessage("assistant", `Image generation failed: ${message}`),
+      ]);
+      showToast({
+        title: "Image generation failed",
+        description: message,
+        intent: Intent.DANGER,
+        placement: ToastPlacement.BOTTOM_RIGHT,
+        duration: 4500,
+      });
+    } finally {
+      if (!streamAbortRef.current) {
+        setInputState(ChatInputState.READY);
+      }
+    }
+  }
+
   return (
     <div className={styles.shell}>
       <Sidebar>
@@ -191,6 +292,10 @@ function ChatViewContent() {
           <ChatInput
             state={inputState}
             onSubmit={(text) => void handleSubmit(text)}
+            onGenerateImage={(prompt) => void handleGenerateImage(prompt)}
+            imageModels={IMAGE_GENERATION_MODELS}
+            selectedImageModelId={selectedImageModelId}
+            onImageModelChange={setSelectedImageModelId}
           />
         </div>
       </main>

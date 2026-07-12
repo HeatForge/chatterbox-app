@@ -14,6 +14,7 @@ import { ToastPlacement } from "@/hooks/use-toaster/types";
 import { useToaster } from "@/hooks/use-toaster/use-toaster";
 import { IconNames } from "@/lib/IconNames";
 import { Intent } from "@/lib/Intent";
+import type { ImageGenerationModelId } from "@/lib/image-generation-models";
 
 import styles from "./chat-input.module.css";
 import { ChatInputState } from "./enums";
@@ -24,11 +25,19 @@ export type ChatInputProps = {
   state?: ChatInputState;
   placeholder?: string;
   onSubmit: (message: string) => void;
+  onGenerateImage?: (prompt: string) => void;
+  imageModels?: readonly {
+    id: ImageGenerationModelId;
+    label: string;
+    description: string;
+  }[];
+  selectedImageModelId?: ImageGenerationModelId;
+  onImageModelChange?: (modelId: ImageGenerationModelId) => void;
   className?: string;
 };
 
 type ToolbarAction = {
-  id: string;
+  id: "attachments" | "tools" | "settings";
   label: string;
   icon: (typeof IconNames)[keyof typeof IconNames];
 };
@@ -65,10 +74,15 @@ export function ChatInput({
   state = ChatInputState.READY,
   placeholder = "Message…",
   onSubmit,
+  onGenerateImage,
+  imageModels = [],
+  selectedImageModelId,
+  onImageModelChange,
   className,
 }: ChatInputProps) {
   const showToast = useToaster();
   const [value, setValue] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
   const [shake, setShake] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previousStateRef = useRef(state);
@@ -81,6 +95,13 @@ export function ChatInput({
     value.trim().length === 0;
   const showLoadingDots = state === ChatInputState.WAITING;
   const isSubmitMuted = state === ChatInputState.STREAMING;
+  const selectedImageModel =
+    imageModels.find((model) => model.id === selectedImageModelId) ??
+    imageModels[0];
+  const isImageGenerateDisabled =
+    !onGenerateImage ||
+    state !== ChatInputState.READY ||
+    value.trim().length === 0;
 
   useEffect(() => {
     if (
@@ -126,6 +147,17 @@ export function ChatInput({
     requestAnimationFrame(() => adjustTextareaHeight());
   }
 
+  function submitImagePrompt(): void {
+    const trimmed = value.trim();
+    if (!trimmed || isImageGenerateDisabled || !onGenerateImage) {
+      return;
+    }
+
+    onGenerateImage(trimmed);
+    setValue("");
+    requestAnimationFrame(() => adjustTextareaHeight());
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     submitMessage();
@@ -141,6 +173,11 @@ export function ChatInput({
   }
 
   function handleToolbarClick(action: ToolbarAction): void {
+    if (action.id === "settings") {
+      setShowSettings((current) => !current);
+      return;
+    }
+
     showToast({
       title: "Not implemented",
       description: `${action.label} will be available in a future update.`,
@@ -148,6 +185,10 @@ export function ChatInput({
       placement: ToastPlacement.BOTTOM_RIGHT,
       duration: 3500,
     });
+  }
+
+  function handleImageModelChange(modelId: string): void {
+    onImageModelChange?.(modelId as ImageGenerationModelId);
   }
 
   return (
@@ -176,6 +217,31 @@ export function ChatInput({
         />
 
         <button
+          type="button"
+          className={styles.generateImageButton}
+          disabled={isImageGenerateDisabled}
+          onClick={submitImagePrompt}
+          aria-label={
+            selectedImageModel
+              ? `Generate image with ${selectedImageModel.label}`
+              : "Generate image"
+          }
+          title={
+            selectedImageModel
+              ? `Generate image with ${selectedImageModel.label}`
+              : "Generate image"
+          }
+        >
+          <Icon
+            className={styles.submitIcon}
+            icon={IconNames["pic-ai-line"]}
+            width={20}
+            height={20}
+            aria-hidden
+          />
+        </button>
+
+        <button
           type="submit"
           className={styles.submitButton}
           disabled={isSubmitDisabled}
@@ -195,6 +261,30 @@ export function ChatInput({
           )}
         </button>
       </div>
+
+      {showSettings && imageModels.length > 0 ? (
+        <div className={styles.settingsPanel}>
+          <label className={styles.settingsField}>
+            <span className={styles.settingsLabel}>Image model</span>
+            <select
+              className={styles.settingsSelect}
+              value={selectedImageModel?.id}
+              onChange={(event) => handleImageModelChange(event.target.value)}
+            >
+              {imageModels.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {selectedImageModel ? (
+            <p className={styles.settingsDescription}>
+              {selectedImageModel.description}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className={styles.toolbar}>
         {TOOLBAR_ACTIONS.map((action) => (
