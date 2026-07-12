@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { ChatThread } from "@/components/chat/ChatThread";
 import { Button } from "@/components/lib/button/Button";
 import { ChatInput } from "@/components/lib/chat-input/ChatInput";
 import { ChatInputState } from "@/components/lib/chat-input/enums";
@@ -75,16 +76,12 @@ function SidebarThreads({
   return (
     <>
       {threads.map((thread) => (
-        <Button
+        <ChatThread
           key={thread.id}
-          text={thread.title}
-          leftIcon={IconNames["chat-3-line"]}
-          intent={
-            thread.id === activeThreadId ? Intent.SECONDARY : Intent.PRIMARY
-          }
-          minimal
-          style={{ justifyContent: "flex-start" }}
-          onClick={() => {
+          id={thread.id}
+          title={thread.title}
+          selected={thread.id === activeThreadId}
+          onSelect={() => {
             onSelectThread(thread.id);
             notifyItemSelected();
           }}

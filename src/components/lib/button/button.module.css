@@ -183,7 +183,7 @@
 
 .button[data-minimal]:hover:not(:disabled),
 .button[data-minimal]:active:not(:disabled) {
-  background: var(--color-background-light);
+  background: transparent;
   border-color: transparent;
 }
 

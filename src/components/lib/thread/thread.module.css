@@ -1,0 +1,41 @@
+.root {
+  display: grid;
+  width: 100%;
+}
+
+.main,
+.actions {
+  grid-area: 1 / 1;
+}
+
+.main {
+  width: 95%;
+  justify-content: flex-start;
+  transition: padding-right 0.15s ease;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  justify-self: end;
+  align-self: center;
+  padding-right: 0.25rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.root:hover .actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.root:hover .main {
+  padding-right: 5.5rem;
+}
+
+.root[data-selected] {
+  background: var(--color-background-light);
+  border-radius: 0.5rem;
+}
