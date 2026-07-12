@@ -6,6 +6,10 @@
   border-radius: 0.5rem;
 }
 
+.projectThread {
+  width: 100%;
+}
+
 .projectRow[data-selected] {
   background: var(--color-background-light);
 }

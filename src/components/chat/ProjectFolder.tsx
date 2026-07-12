@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/lib/button/Button";
+import { Thread, type ThreadAction } from "@/components/lib/thread";
 import { IconNames } from "@/lib/IconNames";
 import { Intent } from "@/lib/Intent";
 
@@ -20,8 +20,16 @@ export type ProjectFolderProps = {
   expanded: boolean;
   selected: boolean;
   selectedThreadId: string | null;
+  archived?: boolean;
   onSelectProject: () => void;
   onSelectThread: (threadId: string) => void;
+  onRenameProject?: () => void;
+  onArchiveProject?: () => void;
+  onUnarchiveProject?: () => void;
+  onDeleteProject?: () => void;
+  onAddChat?: () => void;
+  onRenameThread?: (threadId: string) => void;
+  onDeleteThread?: (threadId: string) => void;
 };
 
 export function ProjectFolder({
@@ -30,22 +38,71 @@ export function ProjectFolder({
   expanded,
   selected,
   selectedThreadId,
+  archived = false,
   onSelectProject,
   onSelectThread,
+  onRenameProject,
+  onArchiveProject,
+  onUnarchiveProject,
+  onDeleteProject,
+  onAddChat,
+  onRenameThread,
+  onDeleteThread,
 }: ProjectFolderProps) {
+  const projectActions: ThreadAction[] = archived
+    ? [
+        {
+          id: "unarchive",
+          icon: IconNames["unarchive-line"],
+          label: "Unarchive project",
+          onClick: onUnarchiveProject ?? (() => {}),
+          intent: Intent.TERTIARY,
+        },
+      ]
+    : [
+        {
+          id: "add-chat",
+          icon: IconNames["add-line"],
+          label: "Add chat",
+          onClick: onAddChat ?? (() => {}),
+          intent: Intent.TERTIARY,
+        },
+        {
+          id: "edit",
+          icon: IconNames["pencil-line"],
+          label: "Rename project",
+          onClick: onRenameProject ?? (() => {}),
+          intent: Intent.TERTIARY,
+        },
+        {
+          id: "archive",
+          icon: IconNames["archive-line"],
+          label: "Archive project",
+          onClick: onArchiveProject ?? (() => {}),
+          intent: Intent.TERTIARY,
+        },
+        {
+          id: "delete",
+          icon: IconNames["delete-line"],
+          label: "Delete project",
+          onClick: onDeleteProject ?? (() => {}),
+          intent: Intent.DANGER,
+        },
+      ];
+
   return (
     <div className={folderStyles.root}>
       <div
         className={folderStyles.projectRow}
         data-selected={selected || undefined}
       >
-        <Button
+        <Thread
           text={title}
           leftIcon={IconNames["folder-line"]}
-          intent={selected ? Intent.SECONDARY : Intent.PRIMARY}
-          minimal
-          style={{ justifyContent: "flex-start", width: "100%" }}
-          onClick={onSelectProject}
+          selected={selected}
+          onSelect={onSelectProject}
+          actions={projectActions}
+          className={folderStyles.projectThread}
         />
       </div>
       {expanded ? (
@@ -56,9 +113,12 @@ export function ProjectFolder({
                 <ChatThread
                   id={thread.id}
                   title={thread.title}
+                  variant="project"
                   iconDisabled
                   selected={thread.id === selectedThreadId}
                   onSelect={() => onSelectThread(thread.id)}
+                  onEdit={() => onRenameThread?.(thread.id)}
+                  onDelete={() => onDeleteThread?.(thread.id)}
                 />
               </div>
             </li>

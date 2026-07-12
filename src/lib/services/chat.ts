@@ -82,6 +82,7 @@ async function getUserThread(
     .selectAll()
     .where("user_id", "=", userId)
     .where("id", "=", threadId)
+    .where("deleted_at", "is", null)
     .executeTakeFirst();
 
   if (!thread) {
@@ -156,7 +157,10 @@ export async function createThread(
   input?: { firstMessage?: string; projectId?: string },
 ): Promise<ChatThreadPayload> {
   if (input?.projectId) {
-    await getProject(userId, input.projectId);
+    const project = await getProject(userId, input.projectId);
+    if (project.archived_at) {
+      throw new BadRequestError("Cannot create threads in archived projects");
+    }
   }
 
   const preferred = await getPreferredModel(userId);
@@ -446,6 +450,90 @@ function encodeSse(event: string, data: unknown): Uint8Array {
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function updateThread(
+  userId: string,
+  threadId: string,
+  input: { title: string },
+) {
+  const normalizedTitle = input.title.trim();
+  if (!normalizedTitle) {
+    throw new BadRequestError("Thread title is required");
+  }
+
+  await getUserThread(userId, threadId);
+
+  const thread = await db
+    .updateTable("chat_threads")
+    .set({ title: normalizedTitle, updated_at: new Date() })
+    .where("user_id", "=", userId)
+    .where("id", "=", threadId)
+    .where("deleted_at", "is", null)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  return toThreadSummary(thread);
+}
+
+export async function archiveThread(userId: string, threadId: string) {
+  const thread = await getUserThread(userId, threadId);
+
+  if (thread.project_id) {
+    throw new BadRequestError("Project threads cannot be archived");
+  }
+
+  if (thread.archived_at) {
+    throw new BadRequestError("Thread is already archived");
+  }
+
+  const updated = await db
+    .updateTable("chat_threads")
+    .set({ archived_at: new Date(), updated_at: new Date() })
+    .where("id", "=", threadId)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  return toThreadSummary(updated);
+}
+
+export async function unarchiveThread(userId: string, threadId: string) {
+  const thread = await db
+    .selectFrom("chat_threads")
+    .selectAll()
+    .where("user_id", "=", userId)
+    .where("id", "=", threadId)
+    .where("deleted_at", "is", null)
+    .executeTakeFirst();
+
+  if (!thread) {
+    throw new NotFoundError("Thread not found");
+  }
+
+  if (!thread.archived_at) {
+    throw new BadRequestError("Thread is not archived");
+  }
+
+  const updated = await db
+    .updateTable("chat_threads")
+    .set({ archived_at: null, updated_at: new Date() })
+    .where("id", "=", threadId)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  return toThreadSummary(updated);
+}
+
+export async function deleteThread(userId: string, threadId: string) {
+  await getUserThread(userId, threadId);
+
+  await db
+    .updateTable("chat_threads")
+    .set({ deleted_at: new Date(), updated_at: new Date() })
+    .where("user_id", "=", userId)
+    .where("id", "=", threadId)
+    .where("deleted_at", "is", null)
+    .execute();
 }
 
 export async function createAssistantMessageStream(

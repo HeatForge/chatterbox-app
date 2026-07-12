@@ -31,6 +31,8 @@ export type StandaloneThreadSummary = {
   updatedAt: string;
 };
 
+type SidebarMode = "active" | "archived";
+
 function toProjectThreadSummary(thread: ChatThread): ProjectThreadSummary {
   return {
     id: thread.id,
@@ -63,6 +65,7 @@ export async function getProject(userId: string, projectId: string) {
     .selectAll()
     .where("user_id", "=", userId)
     .where("id", "=", projectId)
+    .where("deleted_at", "is", null)
     .executeTakeFirst();
 
   if (!project) {
@@ -72,28 +75,40 @@ export async function getProject(userId: string, projectId: string) {
   return project;
 }
 
-export async function listProjectsWithThreads(
+async function listProjectsWithThreadsByMode(
   userId: string,
+  mode: SidebarMode,
 ): Promise<ProjectWithThreads[]> {
-  const projects = await db
+  let projectsQuery = db
     .selectFrom("projects")
     .selectAll()
     .where("user_id", "=", userId)
-    .orderBy("updated_at", "desc")
-    .execute();
+    .where("deleted_at", "is", null);
+
+  projectsQuery =
+    mode === "active"
+      ? projectsQuery.where("archived_at", "is", null)
+      : projectsQuery.where("archived_at", "is not", null);
+
+  const projects = await projectsQuery.orderBy("updated_at", "desc").execute();
 
   if (projects.length === 0) {
     return [];
   }
 
   const projectIds = projects.map((project) => project.id);
-  const threads = await db
+  let threadsQuery = db
     .selectFrom("chat_threads")
     .selectAll()
     .where("user_id", "=", userId)
     .where("project_id", "in", projectIds)
-    .orderBy("updated_at", "desc")
-    .execute();
+    .where("deleted_at", "is", null);
+
+  if (mode === "active") {
+    threadsQuery = threadsQuery.where("archived_at", "is", null);
+  }
+
+  const threads = await threadsQuery.orderBy("updated_at", "desc").execute();
 
   const threadsByProject = new Map<string, ChatThread[]>();
   for (const thread of threads) {
@@ -117,27 +132,55 @@ export async function listProjectsWithThreads(
   }));
 }
 
-export async function listStandaloneThreads(
+async function listStandaloneThreadsByMode(
   userId: string,
+  mode: SidebarMode,
 ): Promise<StandaloneThreadSummary[]> {
-  const threads = await db
+  let query = db
     .selectFrom("chat_threads")
     .selectAll()
     .where("user_id", "=", userId)
     .where("project_id", "is", null)
-    .orderBy("updated_at", "desc")
-    .execute();
+    .where("deleted_at", "is", null);
 
+  query =
+    mode === "active"
+      ? query.where("archived_at", "is", null)
+      : query.where("archived_at", "is not", null);
+
+  const threads = await query.orderBy("updated_at", "desc").execute();
   return threads.map(toStandaloneThreadSummary);
 }
 
-export async function listSidebarThreads(userId: string) {
+export async function listProjectsWithThreads(
+  userId: string,
+): Promise<ProjectWithThreads[]> {
+  return listProjectsWithThreadsByMode(userId, "active");
+}
+
+export async function listStandaloneThreads(
+  userId: string,
+): Promise<StandaloneThreadSummary[]> {
+  return listStandaloneThreadsByMode(userId, "active");
+}
+
+export async function listArchivedSidebarThreads(userId: string) {
   const [projects, standalone] = await Promise.all([
-    listProjectsWithThreads(userId),
-    listStandaloneThreads(userId),
+    listProjectsWithThreadsByMode(userId, "archived"),
+    listStandaloneThreadsByMode(userId, "archived"),
   ]);
 
   return { projects, standalone };
+}
+
+export async function listSidebarThreads(userId: string) {
+  const [projects, standalone, archived] = await Promise.all([
+    listProjectsWithThreads(userId),
+    listStandaloneThreads(userId),
+    listArchivedSidebarThreads(userId),
+  ]);
+
+  return { projects, standalone, archived };
 }
 
 export async function createProject(userId: string, title: string) {
@@ -163,4 +206,110 @@ export async function createProject(userId: string, title: string) {
     updatedAt: project.updated_at.toISOString(),
     threads: [],
   };
+}
+
+export async function updateProject(
+  userId: string,
+  projectId: string,
+  input: { title: string },
+) {
+  const normalizedTitle = input.title.trim();
+  if (!normalizedTitle) {
+    throw new BadRequestError("Project title is required");
+  }
+
+  await getProject(userId, projectId);
+
+  const project = await db
+    .updateTable("projects")
+    .set({ title: normalizedTitle, updated_at: new Date() })
+    .where("user_id", "=", userId)
+    .where("id", "=", projectId)
+    .where("deleted_at", "is", null)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  return {
+    id: project.id,
+    title: project.title,
+    createdAt: project.created_at.toISOString(),
+    updatedAt: project.updated_at.toISOString(),
+  };
+}
+
+export async function archiveProject(userId: string, projectId: string) {
+  const project = await getProject(userId, projectId);
+
+  if (project.archived_at) {
+    throw new BadRequestError("Project is already archived");
+  }
+
+  const updated = await db
+    .updateTable("projects")
+    .set({ archived_at: new Date(), updated_at: new Date() })
+    .where("id", "=", projectId)
+    .where("user_id", "=", userId)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  return {
+    id: updated.id,
+    title: updated.title,
+    createdAt: updated.created_at.toISOString(),
+    updatedAt: updated.updated_at.toISOString(),
+  };
+}
+
+export async function unarchiveProject(userId: string, projectId: string) {
+  const project = await db
+    .selectFrom("projects")
+    .selectAll()
+    .where("user_id", "=", userId)
+    .where("id", "=", projectId)
+    .where("deleted_at", "is", null)
+    .executeTakeFirst();
+
+  if (!project) {
+    throw new NotFoundError("Project not found");
+  }
+
+  if (!project.archived_at) {
+    throw new BadRequestError("Project is not archived");
+  }
+
+  const updated = await db
+    .updateTable("projects")
+    .set({ archived_at: null, updated_at: new Date() })
+    .where("id", "=", projectId)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  return {
+    id: updated.id,
+    title: updated.title,
+    createdAt: updated.created_at.toISOString(),
+    updatedAt: updated.updated_at.toISOString(),
+  };
+}
+
+export async function deleteProject(userId: string, projectId: string) {
+  await getProject(userId, projectId);
+  const now = new Date();
+
+  await db.transaction().execute(async (trx) => {
+    await trx
+      .updateTable("chat_threads")
+      .set({ deleted_at: now, updated_at: now })
+      .where("project_id", "=", projectId)
+      .where("user_id", "=", userId)
+      .where("deleted_at", "is", null)
+      .execute();
+
+    await trx
+      .updateTable("projects")
+      .set({ deleted_at: now, updated_at: now })
+      .where("id", "=", projectId)
+      .where("user_id", "=", userId)
+      .execute();
+  });
 }

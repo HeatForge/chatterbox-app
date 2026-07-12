@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-
 import {
   ChatSidebar,
   type SidebarProject,
   type SidebarSelection,
   type SidebarStandaloneThread,
 } from "@/components/chat/ChatSidebar";
+import { isArchivedChatContext } from "@/components/chat/sidebar-context";
+import {
+  ConfirmDeleteModalContent,
+  RenameModalContent,
+} from "@/components/chat/ThreadActionModals";
 import { ChatInput } from "@/components/lib/chat-input/ChatInput";
 import { ChatInputState } from "@/components/lib/chat-input/enums";
 import {
@@ -15,6 +19,7 @@ import {
   UserMessageBlip,
 } from "@/components/lib/message-blip";
 import { SidebarProvider, SidebarToggle } from "@/components/lib/sidebar";
+import { useModal } from "@/hooks/use-modal/use-modal";
 import { ToastPlacement } from "@/hooks/use-toaster/types";
 import { useToaster } from "@/hooks/use-toaster/use-toaster";
 import { Intent } from "@/lib/Intent";
@@ -43,6 +48,16 @@ type ThreadPayload = {
 type SidebarData = {
   projects: SidebarProject[];
   standalone: SidebarStandaloneThread[];
+  archived: {
+    projects: SidebarProject[];
+    standalone: SidebarStandaloneThread[];
+  };
+};
+
+const EMPTY_SIDEBAR: SidebarData = {
+  projects: [],
+  standalone: [],
+  archived: { projects: [], standalone: [] },
 };
 
 type SendMessageResponse = {
@@ -62,6 +77,44 @@ function createOptimisticUserMessage(content: string): ChatMessage {
   };
 }
 
+function getProjectTitle(
+  projectId: string,
+  sidebar: SidebarData,
+): string | undefined {
+  return (
+    sidebar.projects.find((project) => project.id === projectId)?.title ??
+    sidebar.archived.projects.find((project) => project.id === projectId)?.title
+  );
+}
+
+function findFirstAvailableThreadId(sidebar: SidebarData): string | undefined {
+  const firstStandalone = sidebar.standalone[0];
+  if (firstStandalone) {
+    return firstStandalone.id;
+  }
+
+  for (const project of sidebar.projects) {
+    const firstThread = project.threads[0];
+    if (firstThread) {
+      return firstThread.id;
+    }
+  }
+
+  const firstArchivedStandalone = sidebar.archived.standalone[0];
+  if (firstArchivedStandalone) {
+    return firstArchivedStandalone.id;
+  }
+
+  for (const project of sidebar.archived.projects) {
+    const firstThread = project.threads[0];
+    if (firstThread) {
+      return firstThread.id;
+    }
+  }
+
+  return undefined;
+}
+
 function getProjectIdFromSelection(
   selection: SidebarSelection | null,
 ): string | null {
@@ -78,10 +131,8 @@ function getProjectIdFromSelection(
 
 function ChatPageContent() {
   const showToast = useToaster();
-  const [sidebarData, setSidebarData] = useState<SidebarData>({
-    projects: [],
-    standalone: [],
-  });
+  const showModal = useModal();
+  const [sidebarData, setSidebarData] = useState<SidebarData>(EMPTY_SIDEBAR);
   const [sidebarSelection, setSidebarSelection] =
     useState<SidebarSelection | null>(null);
   const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(
@@ -163,8 +214,290 @@ function ChatPageContent() {
     }
 
     const nextSidebar = (await response.json()) as SidebarData;
-    setSidebarData(nextSidebar);
-    return nextSidebar;
+    const normalized: SidebarData = {
+      projects: nextSidebar.projects ?? [],
+      standalone: nextSidebar.standalone ?? [],
+      archived: nextSidebar.archived ?? { projects: [], standalone: [] },
+    };
+    setSidebarData(normalized);
+    return normalized;
+  }
+
+  function clearActivePane(): void {
+    setActiveThread(null);
+    setMessages([]);
+    setInputState(ChatInputState.READY);
+    setSidebarSelection(null);
+  }
+
+  async function selectFallbackThread(sidebar: SidebarData): Promise<void> {
+    const fallbackThreadId = findFirstAvailableThreadId(sidebar);
+    if (fallbackThreadId) {
+      await loadThread(fallbackThreadId);
+      return;
+    }
+
+    clearActivePane();
+  }
+
+  function showActionError(title: string, error: unknown): void {
+    showToast({
+      title,
+      description:
+        error instanceof Error ? error.message : "Something went wrong.",
+      intent: Intent.DANGER,
+      placement: ToastPlacement.BOTTOM_RIGHT,
+    });
+  }
+
+  function handleRenameThread(threadId: string, currentTitle: string): void {
+    showModal({
+      dim: 5,
+      dismissOnOutsidePress: true,
+      contents: (dismiss) => (
+        <RenameModalContent
+          initialTitle={currentTitle}
+          entityLabel="thread"
+          onCancel={dismiss}
+          onConfirm={(title) => {
+            dismiss();
+            void (async () => {
+              try {
+                const response = await fetch(`/api/chat/threads/${threadId}`, {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ title }),
+                });
+                if (!response.ok) {
+                  throw new Error("Thread could not be renamed");
+                }
+                await loadSidebar();
+                if (activeThread?.id === threadId) {
+                  setActiveThread((current) =>
+                    current ? { ...current, title } : current,
+                  );
+                }
+                threadCacheRef.current.delete(threadId);
+              } catch (error) {
+                showActionError("Rename failed", error);
+              }
+            })();
+          }}
+        />
+      ),
+    });
+  }
+
+  function handleRenameProject(projectId: string, currentTitle: string): void {
+    showModal({
+      dim: 5,
+      dismissOnOutsidePress: true,
+      contents: (dismiss) => (
+        <RenameModalContent
+          initialTitle={currentTitle}
+          entityLabel="project"
+          onCancel={dismiss}
+          onConfirm={(title) => {
+            dismiss();
+            void (async () => {
+              try {
+                const response = await fetch(
+                  `/api/chat/projects/${projectId}`,
+                  {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title }),
+                  },
+                );
+                if (!response.ok) {
+                  throw new Error("Project could not be renamed");
+                }
+                await loadSidebar();
+              } catch (error) {
+                showActionError("Rename failed", error);
+              }
+            })();
+          }}
+        />
+      ),
+    });
+  }
+
+  async function handleArchiveThread(threadId: string): Promise<void> {
+    try {
+      const response = await fetch(`/api/chat/threads/${threadId}/archive`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error("Thread could not be archived");
+      }
+
+      const sidebar = await loadSidebar();
+      threadCacheRef.current.delete(threadId);
+
+      if (activeThread?.id === threadId) {
+        await selectFallbackThread(sidebar);
+      }
+    } catch (error) {
+      showActionError("Archive failed", error);
+    }
+  }
+
+  async function handleUnarchiveThread(threadId: string): Promise<void> {
+    try {
+      const response = await fetch(`/api/chat/threads/${threadId}/unarchive`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error("Thread could not be unarchived");
+      }
+
+      await loadSidebar();
+    } catch (error) {
+      showActionError("Unarchive failed", error);
+    }
+  }
+
+  function handleDeleteThread(threadId: string, message: string): void {
+    showModal({
+      dim: 5,
+      dismissOnOutsidePress: true,
+      contents: (dismiss) => (
+        <ConfirmDeleteModalContent
+          message={message}
+          onCancel={dismiss}
+          onConfirm={() => {
+            dismiss();
+            void (async () => {
+              try {
+                const response = await fetch(`/api/chat/threads/${threadId}`, {
+                  method: "DELETE",
+                });
+                if (!response.ok) {
+                  throw new Error("Thread could not be deleted");
+                }
+
+                const sidebar = await loadSidebar();
+                threadCacheRef.current.delete(threadId);
+
+                if (activeThread?.id === threadId) {
+                  await selectFallbackThread(sidebar);
+                } else if (
+                  sidebarSelection?.type === "thread" &&
+                  sidebarSelection.threadId === threadId
+                ) {
+                  await selectFallbackThread(sidebar);
+                }
+              } catch (error) {
+                showActionError("Delete failed", error);
+              }
+            })();
+          }}
+        />
+      ),
+    });
+  }
+
+  async function handleArchiveProject(projectId: string): Promise<void> {
+    try {
+      const response = await fetch(`/api/chat/projects/${projectId}/archive`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error("Project could not be archived");
+      }
+
+      const sidebar = await loadSidebar();
+
+      if (
+        sidebarSelection?.type === "project" &&
+        sidebarSelection.projectId === projectId
+      ) {
+        clearActivePane();
+      }
+
+      if (activeThread?.projectId === projectId) {
+        await selectFallbackThread(sidebar);
+      }
+    } catch (error) {
+      showActionError("Archive failed", error);
+    }
+  }
+
+  async function handleUnarchiveProject(projectId: string): Promise<void> {
+    try {
+      const response = await fetch(
+        `/api/chat/projects/${projectId}/unarchive`,
+        { method: "POST" },
+      );
+      if (!response.ok) {
+        throw new Error("Project could not be unarchived");
+      }
+
+      await loadSidebar();
+    } catch (error) {
+      showActionError("Unarchive failed", error);
+    }
+  }
+
+  function handleDeleteProject(projectId: string): void {
+    showModal({
+      dim: 5,
+      dismissOnOutsidePress: true,
+      contents: (dismiss) => (
+        <ConfirmDeleteModalContent
+          message="Delete this project and all its chats? They will be permanently hidden."
+          onCancel={dismiss}
+          onConfirm={() => {
+            dismiss();
+            void (async () => {
+              try {
+                const response = await fetch(
+                  `/api/chat/projects/${projectId}`,
+                  {
+                    method: "DELETE",
+                  },
+                );
+                if (!response.ok) {
+                  throw new Error("Project could not be deleted");
+                }
+
+                const sidebar = await loadSidebar();
+
+                for (const [threadId] of threadCacheRef.current) {
+                  const cached = threadCacheRef.current.get(threadId);
+                  if (cached?.projectId === projectId) {
+                    threadCacheRef.current.delete(threadId);
+                  }
+                }
+
+                if (
+                  sidebarSelection?.type === "project" &&
+                  sidebarSelection.projectId === projectId
+                ) {
+                  await selectFallbackThread(sidebar);
+                  return;
+                }
+
+                if (activeThread?.projectId === projectId) {
+                  await selectFallbackThread(sidebar);
+                }
+              } catch (error) {
+                showActionError("Delete failed", error);
+              }
+            })();
+          }}
+        />
+      ),
+    });
+  }
+
+  function handleAddChatInProject(projectId: string): void {
+    setActiveThread(null);
+    setMessages([]);
+    setInputState(ChatInputState.READY);
+    setSidebarSelection({ type: "project", projectId });
+    setExpandedProjectIds((current) => new Set(current).add(projectId));
   }
 
   function connectAssistantStream(threadId: string, messageId: string): void {
@@ -343,6 +676,12 @@ function ChatPageContent() {
         sidebar.standalone.find((thread) => thread.id === result.threadId) ??
         sidebar.projects
           .flatMap((project) => project.threads)
+          .find((thread) => thread.id === result.threadId) ??
+        sidebar.archived.standalone.find(
+          (thread) => thread.id === result.threadId,
+        ) ??
+        sidebar.archived.projects
+          .flatMap((project) => project.threads)
           .find((thread) => thread.id === result.threadId);
 
       const threadResponse = await fetch(
@@ -451,16 +790,23 @@ function ChatPageContent() {
   const headerTitle = activeThread
     ? `${activeThread.title} · ${activeThread.modelId}`
     : sidebarSelection?.type === "project"
-      ? `${sidebarData.projects.find((project) => project.id === sidebarSelection.projectId)?.title ?? "Project"} · New chat`
+      ? `${getProjectTitle(sidebarSelection.projectId, sidebarData) ?? "Project"} · New chat`
       : "New chat";
 
   const activeProjectId = getActiveProjectId();
+  const isArchivedChat = isArchivedChatContext(
+    sidebarData,
+    activeThread,
+    sidebarSelection,
+  );
 
   return (
     <div className={styles.shell}>
       <ChatSidebar
         projects={sidebarData.projects}
         standaloneThreads={sidebarData.standalone}
+        archivedProjects={sidebarData.archived.projects}
+        archivedStandaloneThreads={sidebarData.archived.standalone}
         selection={sidebarSelection}
         expandedProjectIds={expandedProjectIds}
         creatingProject={creatingProject}
@@ -468,6 +814,17 @@ function ChatPageContent() {
         onSelectProject={selectProject}
         onNewChat={startNewChat}
         onNewProject={() => void createProject()}
+        onRenameThread={handleRenameThread}
+        onArchiveThread={(threadId) => void handleArchiveThread(threadId)}
+        onUnarchiveThread={(threadId) => void handleUnarchiveThread(threadId)}
+        onDeleteThread={handleDeleteThread}
+        onRenameProject={handleRenameProject}
+        onArchiveProject={(projectId) => void handleArchiveProject(projectId)}
+        onUnarchiveProject={(projectId) =>
+          void handleUnarchiveProject(projectId)
+        }
+        onDeleteProject={handleDeleteProject}
+        onAddChatInProject={handleAddChatInProject}
       />
 
       <main className={styles.chatView}>
@@ -506,10 +863,16 @@ function ChatPageContent() {
         </div>
 
         <div className={styles.inputArea}>
-          <ChatInput
-            state={inputState}
-            onSubmit={(text) => void handleSubmit(text)}
-          />
+          {isArchivedChat ? (
+            <p className={styles.archivedInputNotice}>
+              You can&apos;t chat with archived chats.
+            </p>
+          ) : (
+            <ChatInput
+              state={inputState}
+              onSubmit={(text) => void handleSubmit(text)}
+            />
+          )}
         </div>
       </main>
     </div>

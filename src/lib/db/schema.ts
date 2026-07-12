@@ -49,6 +49,8 @@ export interface ProjectsTable {
   id: string;
   user_id: string;
   title: string;
+  archived_at: Date | null;
+  deleted_at: Date | null;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }
@@ -61,6 +63,8 @@ export interface ChatThreadsTable {
   provider_id: string | null;
   model_id: string;
   system_prompt: string;
+  archived_at: Date | null;
+  deleted_at: Date | null;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }

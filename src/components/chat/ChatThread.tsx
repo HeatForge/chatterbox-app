@@ -9,6 +9,7 @@ export type ChatThreadProps = {
   title: string;
   selected?: boolean;
   iconDisabled?: boolean;
+  variant?: "standalone" | "project";
   onSelect: () => void;
   onEdit?: () => void;
   onArchive?: () => void;
@@ -19,6 +20,7 @@ export function ChatThread({
   title,
   selected = false,
   iconDisabled = false,
+  variant = "standalone",
   onSelect,
   onEdit,
   onArchive,
@@ -27,26 +29,30 @@ export function ChatThread({
   const actions: ThreadAction[] = [
     {
       id: "edit",
-      icon: IconNames["edit-line"],
-      label: "Edit thread",
+      icon: IconNames["pencil-line"],
+      label: variant === "project" ? "Rename thread" : "Edit thread",
       onClick: onEdit ?? (() => {}),
       intent: Intent.TERTIARY,
     },
-    {
+  ];
+
+  if (variant === "standalone") {
+    actions.push({
       id: "archive",
       icon: IconNames["archive-line"],
       label: "Archive thread",
       onClick: onArchive ?? (() => {}),
       intent: Intent.TERTIARY,
-    },
-    {
-      id: "delete",
-      icon: IconNames["delete-line"],
-      label: "Delete thread",
-      onClick: onDelete ?? (() => {}),
-      intent: Intent.DANGER,
-    },
-  ];
+    });
+  }
+
+  actions.push({
+    id: "delete",
+    icon: IconNames["delete-line"],
+    label: "Delete thread",
+    onClick: onDelete ?? (() => {}),
+    intent: Intent.DANGER,
+  });
 
   return (
     <Thread

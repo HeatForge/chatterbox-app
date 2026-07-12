@@ -73,11 +73,13 @@ export async function findRelevantProjectContext(
     content: string;
     similarity: number;
   }>`
-    SELECT content, 1 - (embedding <=> ${vectorLiteral}::vector) AS similarity
-    FROM project_embeddings
-    WHERE project_id = ${input.projectId}
-      AND thread_id <> ${input.excludeThreadId}
-    ORDER BY embedding <=> ${vectorLiteral}::vector
+    SELECT pe.content, 1 - (pe.embedding <=> ${vectorLiteral}::vector) AS similarity
+    FROM project_embeddings pe
+    INNER JOIN chat_threads ct ON ct.id = pe.thread_id
+    WHERE pe.project_id = ${input.projectId}
+      AND pe.thread_id <> ${input.excludeThreadId}
+      AND ct.deleted_at IS NULL
+    ORDER BY pe.embedding <=> ${vectorLiteral}::vector
     LIMIT ${limit}
   `.execute(db);
 
