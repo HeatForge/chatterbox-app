@@ -10,6 +10,7 @@ export const providerKeys = [
   "perplexity",
   "together",
   "cerebras",
+  "fal",
 ] as const;
 
 export type ProviderKey = (typeof providerKeys)[number];
@@ -21,6 +22,7 @@ export type ProviderCatalogItem = {
   modelEndpoint?: string;
   apiKeyUrl?: string;
   openAiCompatible?: boolean;
+  imageGeneration?: boolean;
 };
 
 export const PROVIDER_CATALOG: ProviderCatalogItem[] = [
@@ -103,5 +105,11 @@ export const PROVIDER_CATALOG: ProviderCatalogItem[] = [
     modelEndpoint: "https://api.cerebras.ai/v1/models",
     apiKeyUrl: "https://cloud.cerebras.ai/platform",
     openAiCompatible: true,
+  },
+  {
+    key: "fal",
+    label: "Fal.ai",
+    apiKeyUrl: "https://fal.ai/dashboard/keys",
+    imageGeneration: true,
   },
 ];

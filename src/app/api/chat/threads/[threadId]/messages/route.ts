@@ -7,6 +7,7 @@ import { getRequiredUserId } from "@/lib/services/session";
 
 const messageSchema = z.object({
   content: z.string().min(1),
+  imageGeneration: z.boolean().optional(),
 });
 
 type RouteContext = {
@@ -19,7 +20,11 @@ export async function POST(request: Request, { params }: RouteContext) {
     const { threadId } = await params;
     const body = messageSchema.parse(await request.json());
     return NextResponse.json(
-      await sendMessage(userId, { threadId, content: body.content }),
+      await sendMessage(userId, {
+        threadId,
+        content: body.content,
+        imageGeneration: body.imageGeneration,
+      }),
       { status: 201 },
     );
   } catch (error) {

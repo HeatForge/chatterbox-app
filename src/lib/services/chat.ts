@@ -4,9 +4,11 @@ import { nanoid } from "nanoid";
 import { type ChatMessage, type ChatThread, db } from "@/lib/db";
 import {
   getGenerationModel,
+  getPreferredImageGenerationModel,
   getPreferredModel,
 } from "@/lib/services/ai-providers";
 import { BadRequestError, NotFoundError } from "@/lib/services/api-errors";
+import { generateImageFromPrompt } from "@/lib/services/image-generation";
 import { getProject } from "@/lib/services/projects";
 import { findRelevantProjectContext, indexMessage } from "@/lib/services/rag";
 
@@ -191,7 +193,11 @@ export async function listThreads(userId: string): Promise<ThreadSummary[]> {
 
 export async function createThread(
   userId: string,
-  input?: { firstMessage?: string; projectId?: string },
+  input?: {
+    firstMessage?: string;
+    projectId?: string;
+    generationMode?: "chat" | "image";
+  },
 ): Promise<ChatThreadPayload> {
   if (input?.projectId) {
     const project = await getProject(userId, input.projectId);
@@ -200,7 +206,10 @@ export async function createThread(
     }
   }
 
-  const preferred = await getPreferredModel(userId);
+  const preferred =
+    input?.generationMode === "image"
+      ? await getPreferredImageGenerationModel(userId)
+      : await getPreferredModel(userId);
   const thread = await db
     .insertInto("chat_threads")
     .values({
@@ -411,9 +420,64 @@ function startAssistantGeneration(
   generationRegistry.set(assistantMessageId, generation);
 }
 
+function startImageGeneration(
+  userId: string,
+  assistantMessage: ChatMessage,
+  prompt: string,
+): void {
+  const assistantMessageId = assistantMessage.id;
+  if (generationRegistry.has(assistantMessageId)) {
+    return;
+  }
+
+  const generation = (async () => {
+    let streamingMessage = toMessageDto(assistantMessage);
+    streamingMessages.set(assistantMessageId, streamingMessage);
+    const content = await generateImageFromPrompt(userId, prompt);
+    await appendAssistantContent(assistantMessageId, content);
+    await finishAssistantMessage(assistantMessageId, "completed");
+    const completedMessage = {
+      ...streamingMessage,
+      content,
+      status: "completed" as const,
+    };
+    streamingMessages.delete(assistantMessageId);
+    publishStreamEvent(assistantMessageId, {
+      type: "done",
+      message: completedMessage,
+    });
+  })()
+    .catch(async (error: unknown) => {
+      const message =
+        error instanceof Error ? error.message : "Image generation failed";
+      await finishAssistantMessage(assistantMessageId, "error", message);
+      const failedMessage = {
+        ...(streamingMessages.get(assistantMessageId) ??
+          toMessageDto(assistantMessage)),
+        status: "error" as const,
+        error: message,
+      };
+      streamingMessages.delete(assistantMessageId);
+      publishStreamEvent(assistantMessageId, {
+        type: "error",
+        message: failedMessage,
+      });
+    })
+    .finally(() => {
+      generationRegistry.delete(assistantMessageId);
+    });
+
+  generationRegistry.set(assistantMessageId, generation);
+}
+
 export async function sendMessage(
   userId: string,
-  input: { threadId?: string; content: string; projectId?: string },
+  input: {
+    threadId?: string;
+    content: string;
+    projectId?: string;
+    imageGeneration?: boolean;
+  },
 ) {
   const content = input.content.trim();
   if (!content) {
@@ -425,6 +489,7 @@ export async function sendMessage(
     : await createThread(userId, {
         firstMessage: content,
         projectId: input.projectId,
+        generationMode: input.imageGeneration ? "image" : "chat",
       }).then((payload) => getUserThread(userId, payload.id));
 
   const updatedAt = new Date();
@@ -488,7 +553,11 @@ export async function sendMessage(
     });
   }
 
-  startAssistantGeneration(userId, thread, assistantMessage, content);
+  if (input.imageGeneration) {
+    startImageGeneration(userId, assistantMessage, content);
+  } else {
+    startAssistantGeneration(userId, thread, assistantMessage, content);
+  }
 
   return {
     threadId: thread.id,

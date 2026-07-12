@@ -138,10 +138,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.375rem;
 
-  width: 2rem;
+  min-width: 2rem;
   height: 2rem;
-  padding: 0;
+  padding: 0 0.5rem;
   border: none;
   border-radius: 0.5rem;
 
@@ -159,6 +160,16 @@
   background: var(--surface-interactive-hover);
 }
 
+.toolbarButton[data-active="true"] {
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+}
+
+.toolbarButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .toolbarButton:focus-visible {
   outline: 2px solid var(--color-primary-light);
   outline-offset: 2px;
@@ -166,6 +177,11 @@
 
 .toolbarIcon {
   flex-shrink: 0;
+}
+
+.toolbarButtonLabel {
+  font-size: 0.8125rem;
+  font-weight: 500;
 }
 
 @media (max-width: 768px) {
@@ -185,7 +201,7 @@
   }
 
   .toolbarButton {
-    width: 2.25rem;
+    min-width: 2.25rem;
     height: 2.25rem;
   }
 }

@@ -732,7 +732,10 @@ function ChatPageContent() {
     return getProjectIdFromSelection(sidebarSelection);
   }
 
-  async function handleSubmit(text: string): Promise<void> {
+  async function handleSubmit(
+    text: string,
+    options: { imageGeneration: boolean },
+  ): Promise<void> {
     const trimmed = text.trim();
     if (!trimmed || inputState !== ChatInputState.READY) {
       return;
@@ -754,6 +757,7 @@ function ChatPageContent() {
         body: JSON.stringify({
           content: trimmed,
           ...(projectId ? { projectId } : {}),
+          ...(options.imageGeneration ? { imageGeneration: true } : {}),
         }),
       });
 
@@ -816,7 +820,9 @@ function ChatPageContent() {
       );
       setInputState(ChatInputState.ERROR);
       showToast({
-        title: "Message failed",
+        title: options.imageGeneration
+          ? "Image generation failed"
+          : "Message failed",
         description:
           error instanceof Error
             ? error.message
@@ -959,7 +965,7 @@ function ChatPageContent() {
           ) : (
             <ChatInput
               state={inputState}
-              onSubmit={(text) => void handleSubmit(text)}
+              onSubmit={(text, options) => void handleSubmit(text, options)}
             />
           )}
         </div>

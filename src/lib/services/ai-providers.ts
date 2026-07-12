@@ -10,6 +10,7 @@ import {
   type ProviderCatalogItem,
   type ProviderKey,
 } from "@/lib/ai/provider-catalog";
+import { FAL_IMAGE_MODELS } from "@/lib/ai/image-model-catalog";
 import { type AiProvider, db } from "@/lib/db";
 import { BadRequestError, NotFoundError } from "@/lib/services/api-errors";
 
@@ -124,6 +125,10 @@ function authHeaders(provider: AiProvider): HeadersInit {
   return { Authorization: `Bearer ${provider.api_key}` };
 }
 
+function supportsImageGeneration(provider: AiProvider): boolean {
+  return getCatalogItem(provider.provider_key).imageGeneration === true;
+}
+
 function buildModelsUrl(
   endpoint: string,
   providerKey: ProviderKey,
@@ -203,7 +208,7 @@ async function fetchModelsFromEndpoint(
     : catalogItem.modelEndpoint;
 
   if (!endpoint) {
-    throw new BadRequestError("Provider does not expose a model endpoint");
+    return [];
   }
 
   const url =
@@ -227,6 +232,10 @@ async function fetchModelsFromEndpoint(
 
 async function fetchModels(provider: AiProvider): Promise<RemoteModel[]> {
   const providerKey = assertProviderKey(provider.provider_key);
+  if (supportsImageGeneration(provider)) {
+    return [];
+  }
+
   const query = isOpenRouterProvider(providerKey)
     ? "output_modalities=text"
     : undefined;
@@ -243,6 +252,9 @@ async function fetchEmbeddingModels(
   provider: AiProvider,
 ): Promise<RemoteModel[]> {
   const providerKey = assertProviderKey(provider.provider_key);
+  if (supportsImageGeneration(provider)) {
+    return [];
+  }
 
   if (isOpenRouterProvider(providerKey)) {
     const models = await fetchModelsFromEndpoint(
@@ -260,7 +272,7 @@ async function fetchEmbeddingModels(
 
 function getModelCacheKey(
   provider: AiProvider,
-  kind: "chat" | "embedding",
+  kind: "chat" | "embedding" | "image",
 ): string {
   return `${provider.id}:${provider.updated_at.toISOString()}:${kind}`;
 }
@@ -347,6 +359,7 @@ type ProviderWithModels = {
   provider: AiProvider;
   models: RemoteModel[];
   embeddingModels: RemoteModel[];
+  imageModels: RemoteModel[];
 };
 
 async function fetchProvidersWithModels(
@@ -358,7 +371,13 @@ async function fetchProvidersWithModels(
         getCachedProviderModels(provider, "chat"),
         getCachedProviderModels(provider, "embedding"),
       ]);
-      return { provider, models, embeddingModels };
+      const imageModels = supportsImageGeneration(provider)
+        ? FAL_IMAGE_MODELS.map((model) => ({
+            id: model.modelId,
+            label: model.label,
+          }))
+        : [];
+      return { provider, models, embeddingModels, imageModels };
     }),
   );
 
@@ -387,9 +406,9 @@ export async function listProviderSummaries(
   const providers = await listUserProviders(userId);
   const providersWithModels = await fetchProvidersWithModels(providers);
   const modelCountByProvider = new Map(
-    providersWithModels.map(({ provider, models }) => [
+    providersWithModels.map(({ provider, models, imageModels }) => [
       provider.id,
-      models.length,
+      models.length + imageModels.length,
     ]),
   );
 
@@ -418,10 +437,13 @@ export type AiSettingsConfig = {
     preferredModelId: string | null;
     preferredEmbeddingProviderId: string | null;
     preferredEmbeddingModelId: string | null;
+    preferredImageProviderId: string | null;
+    preferredImageModelId: string | null;
   };
   providers: ProviderSummary[];
   models: ModelOption[];
   embeddingModels: ModelOption[];
+  imageModels: ModelOption[];
 };
 
 /**
@@ -444,12 +466,15 @@ export async function getAiSettingsShell(
       preferredModelId: settings.preferred_model_id,
       preferredEmbeddingProviderId: settings.preferred_embedding_provider_id,
       preferredEmbeddingModelId: settings.preferred_embedding_model_id,
+      preferredImageProviderId: settings.preferred_image_provider_id,
+      preferredImageModelId: settings.preferred_image_model_id,
     },
     providers: providers.map((provider) =>
       summarizeProvider(provider, new Map()),
     ),
     models: [],
     embeddingModels: [],
+    imageModels: [],
   };
 }
 
@@ -462,9 +487,9 @@ export async function getAiSettingsConfig(
   ]);
   const providersWithModels = await fetchProvidersWithModels(providers);
   const modelCountByProvider = new Map(
-    providersWithModels.map(({ provider, models }) => [
+    providersWithModels.map(({ provider, models, imageModels }) => [
       provider.id,
-      models.length,
+      models.length + imageModels.length,
     ]),
   );
 
@@ -475,6 +500,8 @@ export async function getAiSettingsConfig(
       preferredModelId: settings.preferred_model_id,
       preferredEmbeddingProviderId: settings.preferred_embedding_provider_id,
       preferredEmbeddingModelId: settings.preferred_embedding_model_id,
+      preferredImageProviderId: settings.preferred_image_provider_id,
+      preferredImageModelId: settings.preferred_image_model_id,
     },
     providers: providers.map((provider) =>
       summarizeProvider(provider, modelCountByProvider),
@@ -489,6 +516,12 @@ export async function getAiSettingsConfig(
       .filter(({ provider }) => provider.enabled)
       .flatMap((providerWithModels) =>
         toModelOptions(providerWithModels, providerWithModels.embeddingModels),
+      )
+      .sort((left, right) => left.label.localeCompare(right.label)),
+    imageModels: providersWithModels
+      .filter(({ provider }) => provider.enabled)
+      .flatMap((providerWithModels) =>
+        toModelOptions(providerWithModels, providerWithModels.imageModels),
       )
       .sort((left, right) => left.label.localeCompare(right.label)),
   };
@@ -609,6 +642,62 @@ export async function updateEmbeddingSettings(
   return getAiSettingsConfig(userId);
 }
 
+async function validateImageModel(
+  userId: string,
+  providerId: string,
+  modelId: string,
+): Promise<void> {
+  const provider = await getUserProvider(userId, providerId);
+
+  if (!provider.enabled) {
+    throw new BadRequestError("Selected image provider is disabled");
+  }
+
+  if (!supportsImageGeneration(provider)) {
+    throw new BadRequestError("Image generation only supports Fal.ai");
+  }
+
+  if (
+    !FAL_IMAGE_MODELS.some(
+      (model) =>
+        model.providerKey === provider.provider_key &&
+        model.modelId === modelId,
+    )
+  ) {
+    throw new BadRequestError("Selected image model is not available");
+  }
+}
+
+export async function updateImageGenerationSettings(
+  userId: string,
+  input: {
+    preferredImageProviderId: string | null;
+    preferredImageModelId: string | null;
+  },
+) {
+  await getUserSettings(userId);
+
+  if (input.preferredImageProviderId && input.preferredImageModelId) {
+    await validateImageModel(
+      userId,
+      input.preferredImageProviderId,
+      input.preferredImageModelId,
+    );
+  }
+
+  await db
+    .updateTable("ai_user_settings")
+    .set({
+      preferred_image_provider_id: input.preferredImageProviderId,
+      preferred_image_model_id: input.preferredImageModelId,
+      updated_at: new Date(),
+    })
+    .where("user_id", "=", userId)
+    .execute();
+
+  return getAiSettingsConfig(userId);
+}
+
 export async function addProvider(
   userId: string,
   input: {
@@ -685,7 +774,10 @@ export async function updateProvider(
 
   invalidateProviderModelCache(providerId);
   const providersWithModels = await fetchProvidersWithModels([provider]);
-  const modelCount = providersWithModels[0]?.models.length ?? 0;
+  const providerWithModels = providersWithModels[0];
+  const modelCount = providerWithModels
+    ? providerWithModels.models.length + providerWithModels.imageModels.length
+    : 0;
 
   return summarizeProvider(provider, new Map([[providerId, modelCount]]));
 }
@@ -710,6 +802,10 @@ export async function getGenerationModel(
 
   if (!provider.enabled) {
     throw new BadRequestError("Selected provider is disabled");
+  }
+
+  if (supportsImageGeneration(provider)) {
+    throw new BadRequestError("Use the image generation toggle for Fal.ai");
   }
 
   switch (provider.provider_key) {
@@ -761,6 +857,36 @@ export async function getPreferredEmbeddingModel(userId: string) {
   return {
     providerId: settings.preferred_embedding_provider_id,
     modelId: settings.preferred_embedding_model_id,
+  };
+}
+
+export async function getPreferredImageGenerationModel(userId: string) {
+  const settings = await getUserSettings(userId);
+
+  if (
+    !settings.preferred_image_provider_id ||
+    !settings.preferred_image_model_id
+  ) {
+    throw new BadRequestError(
+      "Select an image generation model in Settings first",
+    );
+  }
+
+  await validateImageModel(
+    userId,
+    settings.preferred_image_provider_id,
+    settings.preferred_image_model_id,
+  );
+  const provider = await getUserProvider(
+    userId,
+    settings.preferred_image_provider_id,
+  );
+
+  return {
+    providerId: settings.preferred_image_provider_id,
+    modelId: settings.preferred_image_model_id,
+    systemPrompt: settings.system_prompt,
+    apiKey: provider.api_key,
   };
 }
 

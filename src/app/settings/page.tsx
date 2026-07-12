@@ -70,6 +70,7 @@ export default function SettingsPage() {
   const [baseUrl, setBaseUrl] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
   const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState("");
+  const [selectedImageModel, setSelectedImageModel] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [busyAction, setBusyAction] = useState<string | null>(null);
 
@@ -103,6 +104,15 @@ export default function SettingsPage() {
             })
           : "",
       );
+      setSelectedImageModel(
+        initialSettings.settings.preferredImageProviderId &&
+          initialSettings.settings.preferredImageModelId
+          ? getModelValue({
+              providerId: initialSettings.settings.preferredImageProviderId,
+              modelId: initialSettings.settings.preferredImageModelId,
+            })
+          : "",
+      );
     }
   }, [cachedSettings, initialSettings]);
 
@@ -129,6 +139,15 @@ export default function SettingsPage() {
         ? getModelValue({
             providerId: data.settings.preferredEmbeddingProviderId,
             modelId: data.settings.preferredEmbeddingModelId,
+          })
+        : "",
+    );
+    setSelectedImageModel(
+      data.settings.preferredImageProviderId &&
+        data.settings.preferredImageModelId
+        ? getModelValue({
+            providerId: data.settings.preferredImageProviderId,
+            modelId: data.settings.preferredImageModelId,
           })
         : "",
     );
@@ -167,6 +186,17 @@ export default function SettingsPage() {
     }
 
     return config.embeddingModels.map((model) => ({
+      value: getModelValue(model),
+      label: `${model.label} (${model.providerName})`,
+    }));
+  }, [config]);
+
+  const imageModelOptions = useMemo(() => {
+    if (!config) {
+      return [];
+    }
+
+    return config.imageModels.map((model) => ({
       value: getModelValue(model),
       label: `${model.label} (${model.providerName})`,
     }));
@@ -291,6 +321,32 @@ export default function SettingsPage() {
       showToast({
         title: "Embedding model saved",
         description: "Your default embedding model was updated.",
+        intent: Intent.SUCCESS,
+        placement: ToastPlacement.BOTTOM_RIGHT,
+      });
+    });
+  }
+
+  async function saveImageGenerationSettings(): Promise<void> {
+    await runAction("save-image-generation-settings", async () => {
+      const model = parseModelValue(selectedImageModel);
+      const response = await fetch("/api/settings/ai/image-generation", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          preferredImageProviderId: model.providerId,
+          preferredImageModelId: model.modelId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Image generation settings could not be saved");
+      }
+
+      await applySettingsResponse(response);
+      showToast({
+        title: "Image model saved",
+        description: "Your default Fal.ai image model was updated.",
         intent: Intent.SUCCESS,
         placement: ToastPlacement.BOTTOM_RIGHT,
       });
@@ -487,6 +543,38 @@ export default function SettingsPage() {
                     busyAction === "save-embedding-settings"
                   }
                   onClick={() => void saveEmbeddingSettings()}
+                />
+              </div>
+
+              <div className={styles.settingGroup}>
+                <label className={styles.settingLabel} htmlFor="image-model">
+                  Image generation model
+                </label>
+                <p className={styles.settingHint}>
+                  Add a Fal.ai API key, then select the model used when the chat
+                  input image toggle is enabled.
+                </p>
+                {configLoading ? (
+                  <p className={styles.sectionLoading}>Loading models…</p>
+                ) : (
+                  <Select
+                    id="image-model"
+                    options={imageModelOptions}
+                    value={selectedImageModel}
+                    onChange={setSelectedImageModel}
+                    searchable
+                    emptyMessage="Add and enable Fal.ai to load image models."
+                  />
+                )}
+                <Button
+                  text="Save image model"
+                  intent={Intent.PRIMARY}
+                  disabled={
+                    configLoading ||
+                    !selectedImageModel ||
+                    busyAction === "save-image-generation-settings"
+                  }
+                  onClick={() => void saveImageGenerationSettings()}
                 />
               </div>
             </>

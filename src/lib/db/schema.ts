@@ -29,6 +29,8 @@ export interface AiUserSettingsTable {
   preferred_model_id: string | null;
   preferred_embedding_provider_id: string | null;
   preferred_embedding_model_id: string | null;
+  preferred_image_provider_id: string | null;
+  preferred_image_model_id: string | null;
   created_at: Generated<Date>;
   updated_at: Generated<Date>;
 }
