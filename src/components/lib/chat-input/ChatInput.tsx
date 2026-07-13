@@ -23,7 +23,7 @@ export { ChatInputState } from "./enums";
 export type ChatInputProps = {
   state?: ChatInputState;
   placeholder?: string;
-  onSubmit: (message: string) => void;
+  onSubmit: (message: string, options: { imageGeneration: boolean }) => void;
   className?: string;
 };
 
@@ -69,6 +69,7 @@ export function ChatInput({
 }: ChatInputProps) {
   const showToast = useToaster();
   const [value, setValue] = useState("");
+  const [imageGenerationEnabled, setImageGenerationEnabled] = useState(false);
   const [shake, setShake] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previousStateRef = useRef(state);
@@ -121,7 +122,7 @@ export function ChatInput({
       return;
     }
 
-    onSubmit(trimmed);
+    onSubmit(trimmed, { imageGeneration: imageGenerationEnabled });
     setValue("");
     requestAnimationFrame(() => adjustTextareaHeight());
   }
@@ -197,6 +198,28 @@ export function ChatInput({
       </div>
 
       <div className={styles.toolbar}>
+        <button
+          type="button"
+          className={styles.toolbarButton}
+          data-active={imageGenerationEnabled || undefined}
+          aria-label={
+            imageGenerationEnabled
+              ? "Disable image generation"
+              : "Enable image generation"
+          }
+          aria-pressed={imageGenerationEnabled}
+          disabled={isInputDisabled}
+          onClick={() => setImageGenerationEnabled((current) => !current)}
+        >
+          <Icon
+            className={styles.toolbarIcon}
+            icon={IconNames["paint-brush-ai-line"]}
+            width={18}
+            height={18}
+            aria-hidden
+          />
+          <span className={styles.toolbarButtonLabel}>Image gen</span>
+        </button>
         {TOOLBAR_ACTIONS.map((action) => (
           <button
             key={action.id}

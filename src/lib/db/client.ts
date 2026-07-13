@@ -1,22 +1,15 @@
 import { Kysely, PostgresDialect } from "kysely";
-import { Pool } from "pg";
+
+import { getPool } from "@/lib/db/pool";
 
 import type { Database } from "./schema";
 
 let instance: Kysely<Database> | undefined;
 
-function getDatabaseUrl(): string {
-  const url = process.env.DATABASE_URL;
-  if (!url) {
-    throw new Error("DATABASE_URL environment variable is not set");
-  }
-  return url;
-}
-
 export function getDb(): Kysely<Database> {
   if (!instance) {
     const dialect = new PostgresDialect({
-      pool: new Pool({ connectionString: getDatabaseUrl() }),
+      pool: getPool(),
     });
     instance = new Kysely<Database>({ dialect });
   }
@@ -24,7 +17,12 @@ export function getDb(): Kysely<Database> {
 }
 
 export const db = new Proxy({} as Kysely<Database>, {
-  get(_target, prop, receiver) {
-    return Reflect.get(getDb(), prop, receiver);
+  get(_target, prop) {
+    const instance = getDb();
+    const value = Reflect.get(instance, prop, instance);
+    if (typeof value === "function") {
+      return value.bind(instance);
+    }
+    return value;
   },
 });

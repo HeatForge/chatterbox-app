@@ -176,6 +176,13 @@
   color: var(--color-primary);
 }
 
+.markdown img {
+  display: block;
+  max-width: min(100%, 32rem);
+  height: auto;
+  border-radius: 0.875rem;
+}
+
 .markdown code {
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 0.875em;
@@ -220,4 +227,14 @@
 
 .root[data-align="right"] .actions {
   justify-content: flex-end;
+}
+
+@media (max-width: 768px) {
+  .root {
+    max-width: 96%;
+  }
+
+  .bodyInner {
+    padding: 0.625rem 0.75rem;
+  }
 }

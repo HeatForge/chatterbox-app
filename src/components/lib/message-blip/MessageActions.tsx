@@ -45,6 +45,7 @@ export function MessageActions({ content, children }: MessageActionsProps) {
         leftIcon={IconNames["copy-line"]}
         intent={Intent.TERTIARY}
         iconSize={13}
+        minimal
         onClick={() => void handleCopy()}
         aria-label="Copy message"
       />

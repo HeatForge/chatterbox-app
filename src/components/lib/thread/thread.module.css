@@ -1,0 +1,58 @@
+.root {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.root .main {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  justify-content: flex-start;
+  overflow: hidden;
+  transition: max-width 0.15s ease;
+}
+
+.actions {
+  position: absolute;
+  top: 50%;
+  right: 0.25rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--thread-actions-gap, 0.375rem);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity 0.15s ease;
+}
+
+.actionButton {
+  flex: 0 0 auto;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+}
+
+.root:hover .actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.root[data-has-actions]:hover .main {
+  max-width: calc(
+    100% -
+    var(--thread-actions-width, 0px) -
+    var(--thread-actions-gap, 0.375rem)
+  );
+}
+
+.root[data-selected] {
+  background: var(--color-background-light);
+  border-radius: 0.5rem;
+}

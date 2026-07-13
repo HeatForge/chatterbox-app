@@ -19,11 +19,7 @@
 .panel {
   position: relative;
   z-index: 1;
-  width: min(32rem, 100%);
   max-height: calc(100vh - 3rem);
   overflow: auto;
-  border-radius: 0.875rem;
-  border: 1px solid rgb(255 255 255 / 10%);
-  background: #171717;
   box-shadow: 0 24px 64px rgb(0 0 0 / 45%);
 }

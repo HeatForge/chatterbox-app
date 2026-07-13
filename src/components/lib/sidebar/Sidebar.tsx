@@ -13,17 +13,23 @@ import { useSidebarResize } from "./useSidebarResize";
 
 type SidebarProps = {
   children: ReactNode;
+  footer?: ReactNode;
   title?: string;
 };
 
 function SidebarLockButton() {
-  const { locked, toggleLocked } = useSidebar();
+  const { locked, isMobile, toggleLocked } = useSidebar();
+
+  if (isMobile) {
+    return null;
+  }
 
   return (
     <Button
       leftIcon={locked ? IconNames["lock-fill"] : IconNames["unlock-line"]}
       intent={Intent.TERTIARY}
       iconSize={18}
+      minimal
       onClick={toggleLocked}
       aria-pressed={locked}
       aria-label={locked ? "Unlock sidebar" : "Lock sidebar open"}
@@ -31,8 +37,8 @@ function SidebarLockButton() {
   );
 }
 
-export function Sidebar({ children, title = "Threads" }: SidebarProps) {
-  const { open, width, isMobile, setWidth } = useSidebar();
+export function Sidebar({ children, footer, title = "Threads" }: SidebarProps) {
+  const { open, width, isMobile, setOpen, setWidth } = useSidebar();
   const resizeEnabled = open && !isMobile;
 
   const { onResizePointerDown } = useSidebarResize({
@@ -55,6 +61,7 @@ export function Sidebar({ children, title = "Threads" }: SidebarProps) {
           <SidebarLockButton />
         </header>
         <div className={styles.content}>{children}</div>
+        {footer ? <footer className={styles.footer}>{footer}</footer> : null}
       </div>
       {resizeEnabled ? (
         <button
@@ -70,7 +77,12 @@ export function Sidebar({ children, title = "Threads" }: SidebarProps) {
   if (isMobile && open) {
     return (
       <div className={styles.mobileOverlay}>
-        <div className={styles.backdrop} aria-hidden />
+        <button
+          type="button"
+          className={styles.backdrop}
+          aria-label="Close sidebar"
+          onClick={() => setOpen(false)}
+        />
         <div
           id={SIDEBAR_ID}
           className={[styles.sidebar, styles.mobile, styles.open].join(" ")}

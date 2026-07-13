@@ -3,13 +3,14 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  min-width: 0;
 
   padding: 0.5rem 1rem;
   border: 1px solid transparent;
   border-radius: 0.5rem;
 
   font-family: var(--font-sans);
-  font-size: 0.9375rem;
+  font-size: var(--button-font-size, 0.9375rem);
   font-weight: 600;
   line-height: 1;
 
@@ -67,15 +68,14 @@
 }
 
 .button[data-intent="tertiary"] {
-  color: var(--intent-tertiary-fg);
-  background: var(--intent-tertiary-bg);
-  border-color: color-mix(in srgb, var(--color-tertiary-light) 35%, transparent);
+  color: var(--color-text);
+  background: var(--color-tertiary);
 }
 
 .button[data-intent="tertiary"]:hover:not(:disabled) {
   background: color-mix(
     in srgb,
-    var(--color-tertiary) 30%,
+    var(--color-tertiary) 38%,
     var(--color-background-dark)
   );
 }
@@ -176,10 +176,52 @@
   );
 }
 
+.button[data-minimal] {
+  background: transparent;
+  border-color: transparent;
+}
+
+.button[data-minimal]:hover:not(:disabled),
+.button[data-minimal]:active:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+}
+
 .text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .icon {
   flex-shrink: 0;
+}
+
+.iconWrapper {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconFill {
+  position: absolute;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.iconLine {
+  transition: opacity 0.15s ease;
+}
+
+.button:hover:not(:disabled) .iconFill,
+.button:active:not(:disabled) .iconFill {
+  opacity: 1;
+}
+
+.button:hover:not(:disabled) .iconLine,
+.button:active:not(:disabled) .iconLine {
+  opacity: 0;
 }
