@@ -1,12 +1,32 @@
 "use client";
 
-import { Thread, type ThreadAction } from "@/components/lib/thread";
-import { IconNames } from "@/lib/IconNames";
-import { Intent } from "@/lib/Intent";
+import {
+  Archive,
+  ArchiveRestore,
+  ChevronRight,
+  Folder,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 
-import { ChatThread } from "./ChatThread";
-import folderStyles from "./project-folder.module.css";
-import treeStyles from "./thread-tree.module.css";
+import { ChatThread } from "@/components/chat/ChatThread";
+import type { SidebarThreadAction } from "@/components/chat/sidebar-thread-item";
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  SidebarMenuAction,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+} from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 export type ProjectFolderThread = {
   id: string;
@@ -49,82 +69,104 @@ export function ProjectFolder({
   onRenameThread,
   onDeleteThread,
 }: ProjectFolderProps) {
-  const projectActions: ThreadAction[] = archived
+  const projectActions: SidebarThreadAction[] = archived
     ? [
         {
           id: "unarchive",
-          icon: IconNames["unarchive-line"],
+          icon: ArchiveRestore,
           label: "Unarchive project",
           onClick: onUnarchiveProject ?? (() => {}),
-          intent: Intent.TERTIARY,
         },
       ]
     : [
         {
           id: "add-chat",
-          icon: IconNames["add-line"],
+          icon: Plus,
           label: "Add chat",
           onClick: onAddChat ?? (() => {}),
-          intent: Intent.TERTIARY,
         },
         {
           id: "edit",
-          icon: IconNames["pencil-line"],
+          icon: Pencil,
           label: "Rename project",
           onClick: onRenameProject ?? (() => {}),
-          intent: Intent.TERTIARY,
         },
         {
           id: "archive",
-          icon: IconNames["archive-line"],
+          icon: Archive,
           label: "Archive project",
           onClick: onArchiveProject ?? (() => {}),
-          intent: Intent.TERTIARY,
         },
         {
           id: "delete",
-          icon: IconNames["delete-line"],
+          icon: Trash2,
           label: "Delete project",
           onClick: onDeleteProject ?? (() => {}),
-          intent: Intent.DANGER,
+          variant: "destructive",
         },
       ];
 
   return (
-    <div className={folderStyles.root}>
-      <div
-        className={folderStyles.projectRow}
-        data-selected={selected || undefined}
-      >
-        <Thread
-          text={title}
-          leftIcon={IconNames["folder-line"]}
-          selected={selected}
-          onSelect={onSelectProject}
-          actions={projectActions}
-          className={folderStyles.projectThread}
-        />
-      </div>
-      {expanded ? (
-        <ul className={treeStyles.treeList}>
-          {threads.map((thread) => (
-            <li className={treeStyles.treeItem} key={thread.id}>
-              <div className={treeStyles.treeItemContent}>
-                <ChatThread
-                  id={thread.id}
-                  title={thread.title}
-                  variant="project"
-                  iconDisabled
-                  selected={thread.id === selectedThreadId}
-                  onSelect={() => onSelectThread(thread.id)}
-                  onEdit={() => onRenameThread?.(thread.id)}
-                  onDelete={() => onDeleteThread?.(thread.id)}
+    <Collapsible open={expanded} className="group/collapsible">
+      <SidebarMenuItem>
+        <SidebarMenuButton isActive={selected} onClick={onSelectProject}>
+          <Folder />
+          <span>{title}</span>
+          <ChevronRight
+            className={cn(
+              "ml-auto transition-transform",
+              expanded && "rotate-90",
+            )}
+          />
+        </SidebarMenuButton>
+        {projectActions.length > 0 ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <SidebarMenuAction
+                  showOnHover
+                  onClick={(event) => event.stopPropagation()}
                 />
-              </div>
-            </li>
+              }
+            >
+              <MoreHorizontal />
+              <span className="sr-only">Project actions</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" side="right">
+              {projectActions.map((action) => (
+                <DropdownMenuItem
+                  key={action.id}
+                  variant={action.variant}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    action.onClick();
+                  }}
+                >
+                  <action.icon />
+                  {action.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+      </SidebarMenuItem>
+      <CollapsibleContent>
+        <SidebarMenuSub>
+          {threads.map((thread) => (
+            <ChatThread
+              key={thread.id}
+              id={thread.id}
+              title={thread.title}
+              variant="project"
+              iconDisabled
+              selected={thread.id === selectedThreadId}
+              onSelect={() => onSelectThread(thread.id)}
+              onEdit={() => onRenameThread?.(thread.id)}
+              onDelete={() => onDeleteThread?.(thread.id)}
+            />
           ))}
-        </ul>
-      ) : null}
-    </div>
+        </SidebarMenuSub>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

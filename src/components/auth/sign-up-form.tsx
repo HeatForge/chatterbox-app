@@ -1,14 +1,31 @@
 "use client";
 
+import { ArrowLeft, Loader2, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
-import { Button } from "@/components/lib/button/Button";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
 import { Intent } from "@/lib/Intent";
+import { intentVariants } from "@/lib/intent-variants";
 
-import styles from "./auth.module.css";
+const tertiaryIntent = intentVariants(Intent.TERTIARY);
 
 function isNotWhitelistedError(error: {
   message?: string;
@@ -60,91 +77,96 @@ export function SignUpForm() {
   }
 
   return (
-    <div className={styles.card}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Create account</h1>
-        <p className={styles.subtitle}>
+    <Card className="w-full max-w-sm">
+      <CardHeader>
+        <CardTitle className="text-2xl font-bold">Create account</CardTitle>
+        <CardDescription>
           Choose a username and password. Access is limited to whitelisted
           emails.
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent>
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          <FieldGroup className="gap-4">
+            <Field>
+              <FieldLabel htmlFor="sign-up-email">Email</FieldLabel>
+              <Input
+                id="sign-up-email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="sign-up-username">Username</FieldLabel>
+              <Input
+                id="sign-up-username"
+                type="text"
+                autoComplete="username"
+                required
+                minLength={3}
+                maxLength={30}
+                pattern="[A-Za-z0-9_.]+"
+                title="Use letters, numbers, underscores, or dots."
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+              />
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="sign-up-password">Password</FieldLabel>
+              <Input
+                id="sign-up-password"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+            </Field>
+          </FieldGroup>
+
+          {error ? <FieldError>{error}</FieldError> : null}
+
+          <div className="flex flex-col gap-3">
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <Loader2 className="animate-spin" data-icon="inline-start" />
+              ) : (
+                <UserPlus data-icon="inline-start" />
+              )}
+              Sign up
+            </Button>
+            <Button
+              type="button"
+              variant={tertiaryIntent.buttonVariant}
+              className={tertiaryIntent.className}
+              disabled={isSubmitting}
+              onClick={() => router.push("/")}
+            >
+              <ArrowLeft data-icon="inline-start" />
+              Back to sign in
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+
+      <CardFooter className="justify-center border-t-0 bg-transparent">
+        <p className="text-center text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <Link
+            className="text-primary underline underline-offset-4 hover:text-primary/80"
+            href="/"
+          >
+            Sign in
+          </Link>
         </p>
-      </div>
-
-      <form className={styles.form} onSubmit={handleSubmit}>
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="sign-up-email">
-            Email
-          </label>
-          <input
-            id="sign-up-email"
-            className={styles.input}
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-        </div>
-
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="sign-up-username">
-            Username
-          </label>
-          <input
-            id="sign-up-username"
-            className={styles.input}
-            type="text"
-            autoComplete="username"
-            required
-            minLength={3}
-            maxLength={30}
-            pattern="[A-Za-z0-9_.]+"
-            title="Use letters, numbers, underscores, or dots."
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-          />
-        </div>
-
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="sign-up-password">
-            Password
-          </label>
-          <input
-            id="sign-up-password"
-            className={styles.input}
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        </div>
-
-        {error ? <p className={styles.error}>{error}</p> : null}
-
-        <div className={styles.actions}>
-          <Button
-            type="submit"
-            text="Sign up"
-            intent={Intent.PRIMARY}
-            disabled={isSubmitting}
-          />
-          <Button
-            type="button"
-            text="Back to sign in"
-            intent={Intent.TERTIARY}
-            disabled={isSubmitting}
-            onClick={() => router.push("/")}
-          />
-        </div>
-      </form>
-
-      <p className={styles.footer}>
-        Already have an account?{" "}
-        <Link className={styles.link} href="/">
-          Sign in
-        </Link>
-      </p>
-    </div>
+      </CardFooter>
+    </Card>
   );
 }

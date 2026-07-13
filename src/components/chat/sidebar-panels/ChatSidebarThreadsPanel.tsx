@@ -1,11 +1,17 @@
+import { Folder, Inbox } from "lucide-react";
+import { ChatThread } from "@/components/chat/ChatThread";
 import type {
   SidebarProject,
   SidebarStandaloneThread,
-} from "@/components/chat/ChatSidebar";
-import { ChatThread } from "@/components/chat/ChatThread";
+} from "@/components/chat/chat-sidebar-types";
 import { ProjectFolder } from "@/components/chat/ProjectFolder";
-import { SidebarSectionDivider } from "@/components/lib/sidebar-section-divider";
-import { IconNames } from "@/lib/IconNames";
+
+import {
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+} from "@/components/ui/sidebar";
 
 export type ChatSidebarThreadsPanelProps = {
   projects: SidebarProject[];
@@ -44,52 +50,74 @@ export function ChatSidebarThreadsPanel({
 }: ChatSidebarThreadsPanelProps) {
   return (
     <>
-      <SidebarSectionDivider icon={IconNames["folder-line"]} label="Projects" />
-      {projects.map((project) => (
-        <ProjectFolder
-          key={project.id}
-          id={project.id}
-          title={project.title}
-          threads={project.threads}
-          expanded={expandedProjectIds.has(project.id)}
-          selected={isProjectSelected(project.id)}
-          selectedThreadId={selectedThreadId}
-          onSelectProject={() => onSelectProject(project.id)}
-          onSelectThread={(threadId) => onSelectThread(threadId, project.id)}
-          onRenameProject={() => onRenameProject(project.id, project.title)}
-          onArchiveProject={() => onArchiveProject(project.id)}
-          onDeleteProject={() => onDeleteProject(project.id)}
-          onAddChat={() => onAddChatInProject(project.id)}
-          onRenameThread={(threadId) =>
-            onRenameThread(threadId, getThreadTitle(threadId))
-          }
-          onDeleteThread={(threadId) =>
-            onDeleteThread(
-              threadId,
-              "Delete this chat? It will be hidden and removed from project context retrieval.",
-            )
-          }
-        />
-      ))}
+      <SidebarGroup>
+        <SidebarGroupLabel>
+          <Folder />
+          Projects
+        </SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {projects.map((project) => (
+              <ProjectFolder
+                key={project.id}
+                id={project.id}
+                title={project.title}
+                threads={project.threads}
+                expanded={expandedProjectIds.has(project.id)}
+                selected={isProjectSelected(project.id)}
+                selectedThreadId={selectedThreadId}
+                onSelectProject={() => onSelectProject(project.id)}
+                onSelectThread={(threadId) =>
+                  onSelectThread(threadId, project.id)
+                }
+                onRenameProject={() =>
+                  onRenameProject(project.id, project.title)
+                }
+                onArchiveProject={() => onArchiveProject(project.id)}
+                onDeleteProject={() => onDeleteProject(project.id)}
+                onAddChat={() => onAddChatInProject(project.id)}
+                onRenameThread={(threadId) =>
+                  onRenameThread(threadId, getThreadTitle(threadId))
+                }
+                onDeleteThread={(threadId) =>
+                  onDeleteThread(
+                    threadId,
+                    "Delete this chat? It will be hidden and removed from project context retrieval.",
+                  )
+                }
+              />
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
 
-      <SidebarSectionDivider icon={IconNames["drawer-line"]} label="Chats" />
-      {standaloneThreads.map((thread) => (
-        <ChatThread
-          key={thread.id}
-          id={thread.id}
-          title={thread.title}
-          selected={thread.id === selectedThreadId}
-          onSelect={() => onSelectThread(thread.id, null)}
-          onEdit={() => onRenameThread(thread.id, thread.title)}
-          onArchive={() => onArchiveThread(thread.id)}
-          onDelete={() =>
-            onDeleteThread(
-              thread.id,
-              "Delete this chat? It will be permanently hidden.",
-            )
-          }
-        />
-      ))}
+      <SidebarGroup>
+        <SidebarGroupLabel>
+          <Inbox />
+          Chats
+        </SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {standaloneThreads.map((thread) => (
+              <ChatThread
+                key={thread.id}
+                id={thread.id}
+                title={thread.title}
+                selected={thread.id === selectedThreadId}
+                onSelect={() => onSelectThread(thread.id, null)}
+                onEdit={() => onRenameThread(thread.id, thread.title)}
+                onArchive={() => onArchiveThread(thread.id)}
+                onDelete={() =>
+                  onDeleteThread(
+                    thread.id,
+                    "Delete this chat? It will be permanently hidden.",
+                  )
+                }
+              />
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
     </>
   );
 }

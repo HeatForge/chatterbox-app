@@ -1,13 +1,17 @@
+import { Folder, Inbox } from "lucide-react";
 import { ArchivedThread } from "@/components/chat/ArchivedThread";
 import type {
   SidebarProject,
   SidebarStandaloneThread,
-} from "@/components/chat/ChatSidebar";
+} from "@/components/chat/chat-sidebar-types";
 import { ProjectFolder } from "@/components/chat/ProjectFolder";
-import { SidebarSectionDivider } from "@/components/lib/sidebar-section-divider";
-import { IconNames } from "@/lib/IconNames";
 
-import archivedPanelStyles from "./chat-sidebar-archived-panel.module.css";
+import {
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+} from "@/components/ui/sidebar";
 
 export type ChatSidebarArchivedPanelProps = {
   archivedProjects: SidebarProject[];
@@ -43,7 +47,7 @@ export function ChatSidebarArchivedPanel({
 
   if (isEmpty) {
     return (
-      <p className={archivedPanelStyles.emptyState}>
+      <p className="px-2 py-1 text-sm text-muted-foreground">
         No archived chats or projects yet.
       </p>
     );
@@ -52,57 +56,65 @@ export function ChatSidebarArchivedPanel({
   return (
     <>
       {archivedProjects.length > 0 ? (
-        <>
-          <SidebarSectionDivider
-            icon={IconNames["folder-line"]}
-            label="Projects"
-          />
-          {archivedProjects.map((project) => (
-            <ProjectFolder
-              key={project.id}
-              id={project.id}
-              title={project.title}
-              threads={project.threads}
-              archived
-              expanded={expandedProjectIds.has(project.id)}
-              selected={isProjectSelected(project.id)}
-              selectedThreadId={selectedThreadId}
-              onSelectProject={() => onSelectProject(project.id)}
-              onSelectThread={(threadId) =>
-                onSelectThread(threadId, project.id)
-              }
-              onUnarchiveProject={() => onUnarchiveProject(project.id)}
-              onRenameThread={(threadId) =>
-                onRenameThread(threadId, getThreadTitle(threadId))
-              }
-              onDeleteThread={(threadId) =>
-                onDeleteThread(
-                  threadId,
-                  "Delete this chat? It will be hidden and removed from project context retrieval.",
-                )
-              }
-            />
-          ))}
-        </>
+        <SidebarGroup>
+          <SidebarGroupLabel>
+            <Folder />
+            Projects
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {archivedProjects.map((project) => (
+                <ProjectFolder
+                  key={project.id}
+                  id={project.id}
+                  title={project.title}
+                  threads={project.threads}
+                  archived
+                  expanded={expandedProjectIds.has(project.id)}
+                  selected={isProjectSelected(project.id)}
+                  selectedThreadId={selectedThreadId}
+                  onSelectProject={() => onSelectProject(project.id)}
+                  onSelectThread={(threadId) =>
+                    onSelectThread(threadId, project.id)
+                  }
+                  onUnarchiveProject={() => onUnarchiveProject(project.id)}
+                  onRenameThread={(threadId) =>
+                    onRenameThread(threadId, getThreadTitle(threadId))
+                  }
+                  onDeleteThread={(threadId) =>
+                    onDeleteThread(
+                      threadId,
+                      "Delete this chat? It will be hidden and removed from project context retrieval.",
+                    )
+                  }
+                />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       ) : null}
 
       {archivedStandaloneThreads.length > 0 ? (
-        <>
-          <SidebarSectionDivider
-            icon={IconNames["drawer-line"]}
-            label="Chats"
-          />
-          {archivedStandaloneThreads.map((thread) => (
-            <ArchivedThread
-              key={thread.id}
-              id={thread.id}
-              title={thread.title}
-              selected={thread.id === selectedThreadId}
-              onSelect={() => onSelectThread(thread.id, null)}
-              onUnarchive={() => onUnarchiveThread(thread.id)}
-            />
-          ))}
-        </>
+        <SidebarGroup>
+          <SidebarGroupLabel>
+            <Inbox />
+            Chats
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {archivedStandaloneThreads.map((thread) => (
+                <ArchivedThread
+                  key={thread.id}
+                  id={thread.id}
+                  title={thread.title}
+                  selected={thread.id === selectedThreadId}
+                  onSelect={() => onSelectThread(thread.id, null)}
+                  onUnarchive={() => onUnarchiveThread(thread.id)}
+                />
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       ) : null}
     </>
   );

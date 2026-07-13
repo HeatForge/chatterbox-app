@@ -7,8 +7,9 @@ storage via MinIO/S3. Deployed via Docker on a personal VPS behind Nginx.
 
 ## Stack
 - Next.js (App Router), React 19, TypeScript strict
-- Vercel AI SDK v6 (streaming, tools)
-- assistant-ui (chat UI)
+- Tailwind CSS v4 + shadcn/ui (design system, `src/components/ui`)
+- assistant-ui (`@assistant-ui/react`) for chat primitives; Lucide icons on migrated surfaces
+- Vercel AI SDK v6 (streaming, tools) via `useExternalStoreRuntime` adapter (`src/lib/chat/runtime/`)
 - Kysely (DB queries), Postgres + pgvector
 - Biome (lint+format), Vitest + Playwright (tests)
 - Better Auth (auth), OpenRouter (LLMs), fal.ai (images)

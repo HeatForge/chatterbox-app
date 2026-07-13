@@ -1,31 +1,46 @@
 "use client";
 
+import { ArrowLeft, Loader2, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
-import { Button } from "@/components/lib/button/Button";
-import { Select } from "@/components/lib/select/Select";
+import { ModelCombobox } from "@/components/settings/model-combobox";
 import { useSettingsInitialData } from "@/components/settings/SettingsInitialDataProvider";
-import { ToastPlacement } from "@/hooks/use-toaster/types";
-import { useToaster } from "@/hooks/use-toaster/use-toaster";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { PROVIDER_CATALOG } from "@/lib/ai/provider-catalog";
 import {
   flushAppCachePersistence,
   getCachedSettings,
   setCachedSettings,
 } from "@/lib/cache/app-cache";
-import { IconNames } from "@/lib/IconNames";
 import { Intent } from "@/lib/Intent";
+import { intentVariants } from "@/lib/intent-variants";
 import type { AiSettingsConfig } from "@/lib/services/ai-providers";
-
-import styles from "./settings.module.css";
+import { showIntentToast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 
 type SettingsCategory = "providers" | "user";
-
-const CATEGORIES: { id: SettingsCategory; label: string }[] = [
-  { id: "providers", label: "Providers" },
-  { id: "user", label: "User" },
-];
 
 type ProviderSummary = {
   id: string;
@@ -37,9 +52,9 @@ type ProviderSummary = {
   modelCount: number;
 };
 
-type ModelOption = AiSettingsConfig["models"][number];
-
-function getModelValue(model: Pick<ModelOption, "providerId" | "modelId">) {
+function getModelValue(
+  model: Pick<AiSettingsConfig["models"][number], "providerId" | "modelId">,
+) {
   return `${model.providerId}:${model.modelId}`;
 }
 
@@ -55,7 +70,7 @@ export default function SettingsPage() {
   const initialSettings = useSettingsInitialData();
   const cachedSettings = getCachedSettings();
   const router = useRouter();
-  const showToast = useToaster();
+  const isMobile = useIsMobile();
   const [category, setCategory] = useState<SettingsCategory>("providers");
   const [config, setConfig] = useState<AiSettingsConfig | null>(
     cachedSettings ?? initialSettings,
@@ -72,6 +87,9 @@ export default function SettingsPage() {
   const [selectedEmbeddingModel, setSelectedEmbeddingModel] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
   const [busyAction, setBusyAction] = useState<string | null>(null);
+
+  const tertiaryIntent = intentVariants(Intent.TERTIARY);
+  const successIntent = intentVariants(Intent.SUCCESS);
 
   async function loadSettings(): Promise<void> {
     const response = await fetch("/api/settings/ai");
@@ -138,51 +156,27 @@ export default function SettingsPage() {
   useEffect(() => {
     void loadSettings()
       .catch(() => {
-        showToast({
+        showIntentToast({
           title: "Settings unavailable",
           description: "Could not load AI provider settings.",
           intent: Intent.DANGER,
-          placement: ToastPlacement.BOTTOM_RIGHT,
         });
       })
       .finally(() => {
         setConfigLoading(false);
       });
-  }, [showToast]);
-
-  const modelOptions = useMemo(() => {
-    if (!config) {
-      return [];
-    }
-
-    return config.models.map((model) => ({
-      value: getModelValue(model),
-      label: `${model.label} (${model.providerName})`,
-    }));
-  }, [config]);
-
-  const embeddingModelOptions = useMemo(() => {
-    if (!config) {
-      return [];
-    }
-
-    return config.embeddingModels.map((model) => ({
-      value: getModelValue(model),
-      label: `${model.label} (${model.providerName})`,
-    }));
-  }, [config]);
+  }, []);
 
   async function runAction(action: string, task: () => Promise<void>) {
     setBusyAction(action);
     try {
       await task();
     } catch (error) {
-      showToast({
+      showIntentToast({
         title: "Action failed",
         description:
           error instanceof Error ? error.message : "Please try again.",
         intent: Intent.DANGER,
-        placement: ToastPlacement.BOTTOM_RIGHT,
       });
     } finally {
       setBusyAction(null);
@@ -262,11 +256,10 @@ export default function SettingsPage() {
       }
 
       await applySettingsResponse(response);
-      showToast({
+      showIntentToast({
         title: "Settings saved",
         description: "Your default chat model and system prompt were updated.",
         intent: Intent.SUCCESS,
-        placement: ToastPlacement.BOTTOM_RIGHT,
       });
     });
   }
@@ -288,244 +281,397 @@ export default function SettingsPage() {
       }
 
       await applySettingsResponse(response);
-      showToast({
+      showIntentToast({
         title: "Embedding model saved",
         description: "Your default embedding model was updated.",
         intent: Intent.SUCCESS,
-        placement: ToastPlacement.BOTTOM_RIGHT,
       });
     });
   }
 
   return (
-    <div className={styles.shell}>
-      <nav className={styles.categorySidebar} aria-label="Settings categories">
-        <h2 className={styles.categoryTitle}>Settings</h2>
-        {CATEGORIES.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={[
-              styles.categoryButton,
-              category === item.id ? styles.categoryButtonActive : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            aria-current={category === item.id ? "page" : undefined}
-            onClick={() => setCategory(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </nav>
-
-      <div className={styles.main}>
-        <header className={styles.header}>
-          <Button
-            text="Back to chat"
-            leftIcon={IconNames["arrow-left-line"]}
-            intent={Intent.TERTIARY}
-            onClick={() => router.push("/chat")}
-            onMouseDown={flushAppCachePersistence}
-          />
-        </header>
-
-        <div className={styles.content}>
-          {category === "providers" ? (
-            <>
-              <h1 className={styles.sectionTitle}>Providers</h1>
-
-              <div className={styles.settingGroup}>
-                <span className={styles.settingLabel}>Add provider</span>
-                <p className={styles.settingHint}>
-                  Store your own API key. Models are fetched from the provider
-                  when you open settings.
-                </p>
-                <div className={styles.formGrid}>
-                  <Select
-                    options={PROVIDER_CATALOG.map((item) => ({
-                      value: item.key,
-                      label: item.label,
-                    }))}
-                    value={providerKey}
-                    onChange={setProviderKey}
-                  />
-                  <input
-                    className={styles.input}
-                    type="password"
-                    value={apiKey}
-                    placeholder="Provider API key"
-                    onChange={(event) => setApiKey(event.target.value)}
-                  />
-                  <input
-                    className={styles.input}
-                    type="url"
-                    value={baseUrl}
-                    placeholder="Custom base URL (optional)"
-                    onChange={(event) => setBaseUrl(event.target.value)}
-                  />
-                  <Button
-                    text="Add provider"
-                    leftIcon={IconNames["add-line"]}
-                    intent={Intent.SECONDARY}
-                    disabled={!apiKey.trim() || busyAction === "add-provider"}
-                    onClick={() => void addProvider()}
-                  />
-                </div>
-              </div>
-
-              <div className={styles.settingGroup}>
-                <span className={styles.settingLabel}>Provider list</span>
-                <p className={styles.settingHint}>
-                  Enabled providers populate the chat model dropdown.
-                </p>
-                <div className={styles.providerList}>
-                  {configLoading ? (
-                    <p className={styles.sectionLoading}>Loading providers…</p>
-                  ) : config?.providers.length === 0 ? (
-                    <p className={styles.emptyState}>No providers added yet.</p>
-                  ) : (
-                    config?.providers.map((provider) => (
-                      <div className={styles.providerCard} key={provider.id}>
-                        <div>
-                          <strong>{provider.displayName}</strong>
-                          <p className={styles.settingHint}>
-                            {provider.modelCount}{" "}
-                            {provider.modelCount === 1 ? "model" : "models"}{" "}
-                            available
-                            {provider.baseUrl ? ` · ${provider.baseUrl}` : ""}
-                          </p>
-                        </div>
-                        <div className={styles.providerActions}>
-                          <Button
-                            text={provider.enabled ? "Enabled" : "Disabled"}
-                            intent={
-                              provider.enabled
-                                ? Intent.SUCCESS
-                                : Intent.TERTIARY
-                            }
-                            disabled={busyAction === `provider-${provider.id}`}
-                            onClick={() =>
-                              void updateProvider(provider.id, {
-                                enabled: !provider.enabled,
-                              })
-                            }
-                          />
-                          <Button
-                            text="Remove"
-                            intent={Intent.DANGER}
-                            disabled={busyAction === `delete-${provider.id}`}
-                            onClick={() => void deleteProvider(provider.id)}
-                          />
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <div className={styles.settingGroup}>
-                <label className={styles.settingLabel} htmlFor="chat-model">
-                  Chat model
-                </label>
-                <p className={styles.settingHint}>
-                  Select the default model used for new conversations.
-                </p>
-                {configLoading ? (
-                  <p className={styles.sectionLoading}>Loading models…</p>
-                ) : (
-                  <Select
-                    id="chat-model"
-                    options={modelOptions}
-                    value={selectedModel}
-                    onChange={setSelectedModel}
-                    searchable
-                    emptyMessage="Add and enable a provider to load models."
-                  />
-                )}
-                <Button
-                  text="Save model"
-                  intent={Intent.PRIMARY}
-                  disabled={
-                    configLoading ||
-                    !selectedModel ||
-                    busyAction === "save-settings"
-                  }
-                  onClick={() => void saveSettings()}
-                />
-              </div>
-
-              <div className={styles.settingGroup}>
-                <label
-                  className={styles.settingLabel}
-                  htmlFor="embedding-model"
-                >
-                  Embedding model
-                </label>
-                <p className={styles.settingHint}>
-                  Required for project chats. Only 1536-dimension embedding
-                  models are supported in this version.
-                </p>
-                {configLoading ? (
-                  <p className={styles.sectionLoading}>Loading models…</p>
-                ) : (
-                  <Select
-                    id="embedding-model"
-                    options={embeddingModelOptions}
-                    value={selectedEmbeddingModel}
-                    onChange={setSelectedEmbeddingModel}
-                    searchable
-                    emptyMessage="Add and enable a provider with embedding models."
-                  />
-                )}
-                <Button
-                  text="Save embedding model"
-                  intent={Intent.PRIMARY}
-                  disabled={
-                    configLoading ||
-                    !selectedEmbeddingModel ||
-                    busyAction === "save-embedding-settings"
-                  }
-                  onClick={() => void saveEmbeddingSettings()}
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <h1 className={styles.sectionTitle}>User</h1>
-
-              <div className={styles.settingGroup}>
-                <label className={styles.settingLabel} htmlFor="system-prompt">
-                  Default system prompt
-                </label>
-                <p className={styles.settingHint}>
-                  Applied to new chats unless overridden per conversation.
-                </p>
-                {configLoading ? (
-                  <p className={styles.sectionLoading}>Loading prompt…</p>
-                ) : (
-                  <textarea
-                    id="system-prompt"
-                    className={styles.textarea}
-                    value={systemPrompt}
-                    onChange={(event) => setSystemPrompt(event.target.value)}
-                  />
-                )}
-                <Button
-                  text="Save prompt"
-                  intent={Intent.PRIMARY}
-                  disabled={
-                    configLoading ||
-                    !systemPrompt.trim() ||
-                    busyAction === "save-settings"
-                  }
-                  onClick={() => void saveSettings()}
-                />
-              </div>
-            </>
+    <Tabs
+      value={category}
+      onValueChange={(value) => setCategory(value as SettingsCategory)}
+      orientation={isMobile ? "horizontal" : "vertical"}
+      className={cn(
+        "flex h-dvh w-full overflow-hidden",
+        isMobile ? "flex-col" : "flex-row",
+      )}
+    >
+      <div
+        className={cn(
+          "shrink-0 bg-sidebar",
+          isMobile
+            ? "border-b border-border"
+            : "h-full w-56 border-r border-border",
+        )}
+      >
+        <div
+          className={cn(
+            "flex gap-1 p-3",
+            isMobile ? "flex-row items-center overflow-x-auto" : "flex-col",
           )}
+        >
+          {!isMobile ? (
+            <p className="mb-1 px-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              Settings
+            </p>
+          ) : null}
+          <TabsList
+            variant="line"
+            className={cn(
+              "h-auto bg-transparent p-0",
+              isMobile ? "w-max min-w-full" : "w-full flex-col items-stretch",
+            )}
+          >
+            <TabsTrigger value="providers" className="justify-start">
+              Providers
+            </TabsTrigger>
+            <TabsTrigger value="user" className="justify-start">
+              User
+            </TabsTrigger>
+          </TabsList>
         </div>
       </div>
-    </div>
+
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 p-3 md:p-6">
+        <header
+          className={cn(
+            "flex shrink-0 items-center",
+            isMobile ? "justify-start" : "justify-end",
+          )}
+        >
+          <Button
+            type="button"
+            variant={tertiaryIntent.buttonVariant}
+            className={tertiaryIntent.className}
+            onClick={() => router.push("/chat")}
+            onMouseDown={flushAppCachePersistence}
+          >
+            <ArrowLeft data-icon="inline-start" />
+            Back to chat
+          </Button>
+        </header>
+
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <TabsContent value="providers" className="mx-auto w-full max-w-3xl">
+            <FieldGroup>
+              <div>
+                <h1 className="text-xl font-semibold">Providers</h1>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Add provider</CardTitle>
+                  <CardDescription>
+                    Store your own API key. Models are fetched from the provider
+                    when you open settings.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FieldGroup className="gap-4">
+                    <div className="grid gap-3 md:grid-cols-[minmax(10rem,14rem)_1fr] md:items-end">
+                      <Field>
+                        <FieldLabel htmlFor="provider-key">Provider</FieldLabel>
+                        <Select
+                          value={providerKey}
+                          onValueChange={(value) => {
+                            if (value) {
+                              setProviderKey(value);
+                            }
+                          }}
+                        >
+                          <SelectTrigger id="provider-key" className="w-full">
+                            <SelectValue placeholder="Select provider" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PROVIDER_CATALOG.map((item) => (
+                              <SelectItem key={item.key} value={item.key}>
+                                {item.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      <Field className="md:col-span-2">
+                        <FieldLabel htmlFor="provider-api-key">
+                          API key
+                        </FieldLabel>
+                        <Input
+                          id="provider-api-key"
+                          type="password"
+                          value={apiKey}
+                          placeholder="Provider API key"
+                          onChange={(event) => setApiKey(event.target.value)}
+                        />
+                      </Field>
+                      <Field className="md:col-span-2">
+                        <FieldLabel htmlFor="provider-base-url">
+                          Base URL
+                        </FieldLabel>
+                        <Input
+                          id="provider-base-url"
+                          type="url"
+                          value={baseUrl}
+                          placeholder="Custom base URL (optional)"
+                          onChange={(event) => setBaseUrl(event.target.value)}
+                        />
+                      </Field>
+                    </div>
+                  </FieldGroup>
+                </CardContent>
+                <CardFooter>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!apiKey.trim() || busyAction === "add-provider"}
+                    onClick={() => void addProvider()}
+                  >
+                    {busyAction === "add-provider" ? (
+                      <Loader2
+                        className="animate-spin"
+                        data-icon="inline-start"
+                      />
+                    ) : (
+                      <Plus data-icon="inline-start" />
+                    )}
+                    Add provider
+                  </Button>
+                </CardFooter>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Provider list</CardTitle>
+                  <CardDescription>
+                    Enabled providers populate the chat model dropdown.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                  {configLoading ? (
+                    <div className="flex flex-col gap-3">
+                      <Skeleton className="h-20 w-full" />
+                      <Skeleton className="h-20 w-full" />
+                    </div>
+                  ) : config?.providers.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No providers added yet.
+                    </p>
+                  ) : (
+                    config?.providers.map((provider) => (
+                      <Card key={provider.id} size="sm">
+                        <CardContent className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="font-medium">
+                              {provider.displayName}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {provider.modelCount}{" "}
+                              {provider.modelCount === 1 ? "model" : "models"}{" "}
+                              available
+                              {provider.baseUrl ? ` · ${provider.baseUrl}` : ""}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2 sm:justify-end">
+                            <Button
+                              type="button"
+                              variant={
+                                provider.enabled
+                                  ? successIntent.buttonVariant
+                                  : tertiaryIntent.buttonVariant
+                              }
+                              className={
+                                provider.enabled
+                                  ? successIntent.className
+                                  : tertiaryIntent.className
+                              }
+                              disabled={
+                                busyAction === `provider-${provider.id}`
+                              }
+                              onClick={() =>
+                                void updateProvider(provider.id, {
+                                  enabled: !provider.enabled,
+                                })
+                              }
+                            >
+                              {busyAction === `provider-${provider.id}` ? (
+                                <Loader2
+                                  className="animate-spin"
+                                  data-icon="inline-start"
+                                />
+                              ) : null}
+                              {provider.enabled ? "Enabled" : "Disabled"}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              disabled={busyAction === `delete-${provider.id}`}
+                              onClick={() => void deleteProvider(provider.id)}
+                            >
+                              {busyAction === `delete-${provider.id}` ? (
+                                <Loader2
+                                  className="animate-spin"
+                                  data-icon="inline-start"
+                                />
+                              ) : (
+                                <Trash2 data-icon="inline-start" />
+                              )}
+                              Remove
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Chat model</CardTitle>
+                  <CardDescription>
+                    Select the default model used for new conversations.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Field>
+                    <FieldLabel htmlFor="chat-model">Model</FieldLabel>
+                    {configLoading ? (
+                      <Skeleton className="h-8 w-full" />
+                    ) : (
+                      <ModelCombobox
+                        id="chat-model"
+                        value={selectedModel}
+                        onChange={setSelectedModel}
+                        models={config?.models ?? []}
+                        emptyMessage="Add and enable a provider to load models."
+                      />
+                    )}
+                  </Field>
+                </CardContent>
+                <CardFooter>
+                  <Button
+                    type="button"
+                    disabled={
+                      configLoading ||
+                      !selectedModel ||
+                      busyAction === "save-settings"
+                    }
+                    onClick={() => void saveSettings()}
+                  >
+                    {busyAction === "save-settings" ? (
+                      <Loader2
+                        className="animate-spin"
+                        data-icon="inline-start"
+                      />
+                    ) : null}
+                    Save model
+                  </Button>
+                </CardFooter>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Embedding model</CardTitle>
+                  <CardDescription>
+                    Required for project chats. Only 1536-dimension embedding
+                    models are supported in this version.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Field>
+                    <FieldLabel htmlFor="embedding-model">Model</FieldLabel>
+                    {configLoading ? (
+                      <Skeleton className="h-8 w-full" />
+                    ) : (
+                      <ModelCombobox
+                        id="embedding-model"
+                        value={selectedEmbeddingModel}
+                        onChange={setSelectedEmbeddingModel}
+                        models={config?.embeddingModels ?? []}
+                        emptyMessage="Add and enable a provider with embedding models."
+                      />
+                    )}
+                  </Field>
+                </CardContent>
+                <CardFooter>
+                  <Button
+                    type="button"
+                    disabled={
+                      configLoading ||
+                      !selectedEmbeddingModel ||
+                      busyAction === "save-embedding-settings"
+                    }
+                    onClick={() => void saveEmbeddingSettings()}
+                  >
+                    {busyAction === "save-embedding-settings" ? (
+                      <Loader2
+                        className="animate-spin"
+                        data-icon="inline-start"
+                      />
+                    ) : null}
+                    Save embedding model
+                  </Button>
+                </CardFooter>
+              </Card>
+            </FieldGroup>
+          </TabsContent>
+
+          <TabsContent value="user" className="mx-auto w-full max-w-3xl">
+            <FieldGroup>
+              <div>
+                <h1 className="text-xl font-semibold">User</h1>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Default system prompt</CardTitle>
+                  <CardDescription>
+                    Applied to new chats unless overridden per conversation.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Field>
+                    <FieldLabel htmlFor="system-prompt">Prompt</FieldLabel>
+                    {configLoading ? (
+                      <Skeleton className="min-h-48 w-full" />
+                    ) : (
+                      <Textarea
+                        id="system-prompt"
+                        className="min-h-48 font-mono text-xs"
+                        value={systemPrompt}
+                        onChange={(event) =>
+                          setSystemPrompt(event.target.value)
+                        }
+                      />
+                    )}
+                  </Field>
+                </CardContent>
+                <CardFooter>
+                  <Button
+                    type="button"
+                    disabled={
+                      configLoading ||
+                      !systemPrompt.trim() ||
+                      busyAction === "save-settings"
+                    }
+                    onClick={() => void saveSettings()}
+                  >
+                    {busyAction === "save-settings" ? (
+                      <Loader2
+                        className="animate-spin"
+                        data-icon="inline-start"
+                      />
+                    ) : null}
+                    Save prompt
+                  </Button>
+                </CardFooter>
+              </Card>
+            </FieldGroup>
+          </TabsContent>
+        </div>
+      </div>
+    </Tabs>
   );
 }

@@ -1,6 +1,9 @@
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  test: {
+    exclude: ["**/node_modules/**", "**/e2e/**"],
+  },
   resolve: {
     alias: {
       "@": new URL("./src", import.meta.url).pathname,

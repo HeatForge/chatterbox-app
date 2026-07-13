@@ -1,5 +1,5 @@
-import type { ButtonIcon } from "@/components/lib/button/Button";
-import { IconNames } from "@/lib/IconNames";
+import type { LucideIcon } from "lucide-react";
+import { Archive, Inbox } from "lucide-react";
 
 export type SidebarPanelId = "threads" | "archived";
 
@@ -7,7 +7,7 @@ export type SidebarPanelDefinition = {
   id: SidebarPanelId;
   title: string;
   toggleLabel: string;
-  toggleIcon: ButtonIcon;
+  toggleIcon: LucideIcon;
 };
 
 export const SIDEBAR_PANELS = {
@@ -15,13 +15,13 @@ export const SIDEBAR_PANELS = {
     id: "threads",
     title: "Threads",
     toggleLabel: "Archived",
-    toggleIcon: IconNames["archive-line"],
+    toggleIcon: Archive,
   },
   archived: {
     id: "archived",
     title: "Archived",
     toggleLabel: "Threads",
-    toggleIcon: IconNames["drawer-line"],
+    toggleIcon: Inbox,
   },
 } as const satisfies Record<SidebarPanelId, SidebarPanelDefinition>;
 

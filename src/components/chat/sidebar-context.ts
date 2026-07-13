@@ -2,7 +2,7 @@ import type {
   SidebarProject,
   SidebarSelection,
   SidebarStandaloneThread,
-} from "@/components/chat/ChatSidebar";
+} from "@/components/chat/chat-sidebar-types";
 
 export type SidebarArchivedData = {
   projects: SidebarProject[];

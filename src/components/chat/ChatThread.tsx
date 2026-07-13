@@ -1,8 +1,11 @@
 "use client";
 
-import { Thread, type ThreadAction } from "@/components/lib/thread";
-import { IconNames } from "@/lib/IconNames";
-import { Intent } from "@/lib/Intent";
+import { Archive, MessageSquare, Pencil, Trash2 } from "lucide-react";
+
+import {
+  type SidebarThreadAction,
+  SidebarThreadItem,
+} from "@/components/chat/sidebar-thread-item";
 
 export type ChatThreadProps = {
   id: string;
@@ -26,41 +29,40 @@ export function ChatThread({
   onArchive,
   onDelete,
 }: ChatThreadProps) {
-  const actions: ThreadAction[] = [
+  const actions: SidebarThreadAction[] = [
     {
       id: "edit",
-      icon: IconNames["pencil-line"],
+      icon: Pencil,
       label: variant === "project" ? "Rename thread" : "Edit thread",
       onClick: onEdit ?? (() => {}),
-      intent: Intent.TERTIARY,
     },
   ];
 
   if (variant === "standalone") {
     actions.push({
       id: "archive",
-      icon: IconNames["archive-line"],
+      icon: Archive,
       label: "Archive thread",
       onClick: onArchive ?? (() => {}),
-      intent: Intent.TERTIARY,
     });
   }
 
   actions.push({
     id: "delete",
-    icon: IconNames["delete-line"],
+    icon: Trash2,
     label: "Delete thread",
     onClick: onDelete ?? (() => {}),
-    intent: Intent.DANGER,
+    variant: "destructive",
   });
 
   return (
-    <Thread
-      text={title}
-      leftIcon={iconDisabled ? undefined : IconNames["chat-3-line"]}
+    <SidebarThreadItem
+      title={title}
+      icon={iconDisabled ? undefined : MessageSquare}
       selected={selected}
       onSelect={onSelect}
       actions={actions}
+      subItem={variant === "project"}
     />
   );
 }

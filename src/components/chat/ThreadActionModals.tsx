@@ -1,26 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { Button } from "@/components/lib/button/Button";
-import { Intent } from "@/lib/Intent";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
-import styles from "./thread-action-modals.module.css";
-
-type RenameModalContentProps = {
+export type RenameDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   initialTitle: string;
   entityLabel: string;
   onConfirm: (title: string) => void;
-  onCancel: () => void;
 };
 
-export function RenameModalContent({
+export function RenameDialog({
+  open,
+  onOpenChange,
   initialTitle,
   entityLabel,
   onConfirm,
-  onCancel,
-}: RenameModalContentProps) {
+}: RenameDialogProps) {
   const [title, setTitle] = useState(initialTitle);
+
+  useEffect(() => {
+    if (open) {
+      setTitle(initialTitle);
+    }
+  }, [open, initialTitle]);
 
   function handleSubmit(event: React.FormEvent): void {
     event.preventDefault();
@@ -32,43 +56,69 @@ export function RenameModalContent({
   }
 
   return (
-    <form className={styles.panel} onSubmit={handleSubmit}>
-      <h2 className={styles.title}>Rename {entityLabel}</h2>
-      <label className={styles.label}>
-        Title
-        <input
-          className={styles.input}
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-        />
-      </label>
-      <div className={styles.actions}>
-        <Button text="Cancel" intent={Intent.TERTIARY} onClick={onCancel} />
-        <Button text="Save" intent={Intent.PRIMARY} type="submit" />
-      </div>
-    </form>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Rename {entityLabel}</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="rename-title">Title</Label>
+            <Input
+              id="rename-title"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit">Save</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-type ConfirmDeleteModalContentProps = {
+export type ConfirmDeleteAlertDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   message: string;
   onConfirm: () => void;
-  onCancel: () => void;
 };
 
-export function ConfirmDeleteModalContent({
+export function ConfirmDeleteAlertDialog({
+  open,
+  onOpenChange,
   message,
   onConfirm,
-  onCancel,
-}: ConfirmDeleteModalContentProps) {
+}: ConfirmDeleteAlertDialogProps) {
   return (
-    <div className={styles.panel}>
-      <h2 className={styles.title}>Confirm delete</h2>
-      <p className={styles.message}>{message}</p>
-      <div className={styles.actions}>
-        <Button text="Cancel" intent={Intent.TERTIARY} onClick={onCancel} />
-        <Button text="Delete" intent={Intent.DANGER} onClick={onConfirm} />
-      </div>
-    </div>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Confirm delete</AlertDialogTitle>
+          <AlertDialogDescription>{message}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={() => {
+              onConfirm();
+            }}
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

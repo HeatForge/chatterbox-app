@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
 
 import { AppCacheSessionSync } from "@/components/AppCacheSessionSync";
-import { EventProvider } from "@/hooks/event-provider/event-provider";
+import { AppProviders } from "@/components/app-providers";
+import { cn } from "@/lib/utils";
 
 import "./globals.css";
 
@@ -22,10 +23,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={jetbrainsMono.variable}>
+    <html lang="en" className={cn("dark", jetbrainsMono.variable)}>
       <body>
         <AppCacheSessionSync />
-        <EventProvider>{children}</EventProvider>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );

@@ -5,7 +5,7 @@ import { createContext, useContext, useState } from "react";
 import type {
   SidebarProject,
   SidebarStandaloneThread,
-} from "@/components/chat/ChatSidebar";
+} from "@/components/chat/chat-sidebar-types";
 import type { ChatThreadPayload } from "@/lib/services/chat";
 
 export type ChatSidebarData = {

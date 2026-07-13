@@ -1,11 +1,11 @@
 "use client";
 
+import { TriangleAlertIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef } from "react";
 
-import { BannerPlacement } from "@/hooks/use-banner/types";
-import { useBanner } from "@/hooks/use-banner/use-banner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Intent } from "@/lib/Intent";
+import { intentClassName } from "@/lib/intent-variants";
 
 const AUTH_BANNER_MESSAGES = {
   required: {
@@ -27,30 +27,19 @@ function isAuthBannerKey(value: string | null): value is AuthBannerKey {
 
 export function AuthQueryBanners() {
   const searchParams = useSearchParams();
-  const showBanner = useBanner();
-  const shownRef = useRef<string | null>(null);
   const authParam = searchParams.get("auth");
 
-  useEffect(() => {
-    if (!isAuthBannerKey(authParam)) {
-      shownRef.current = null;
-      return;
-    }
+  if (!isAuthBannerKey(authParam)) {
+    return null;
+  }
 
-    if (shownRef.current === authParam) {
-      return;
-    }
+  const message = AUTH_BANNER_MESSAGES[authParam];
 
-    const message = AUTH_BANNER_MESSAGES[authParam];
-    showBanner({
-      title: message.title,
-      description: message.description,
-      intent: Intent.WARNING,
-      placement: BannerPlacement.TOP,
-      dismissable: false,
-    });
-    shownRef.current = authParam;
-  }, [authParam, showBanner]);
-
-  return null;
+  return (
+    <Alert className={intentClassName(Intent.WARNING)}>
+      <TriangleAlertIcon />
+      <AlertTitle>{message.title}</AlertTitle>
+      <AlertDescription>{message.description}</AlertDescription>
+    </Alert>
+  );
 }

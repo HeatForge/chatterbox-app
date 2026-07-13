@@ -1,8 +1,11 @@
 "use client";
 
-import { Thread, type ThreadAction } from "@/components/lib/thread";
-import { IconNames } from "@/lib/IconNames";
-import { Intent } from "@/lib/Intent";
+import { ArchiveRestore, MessageSquare } from "lucide-react";
+
+import {
+  type SidebarThreadAction,
+  SidebarThreadItem,
+} from "@/components/chat/sidebar-thread-item";
 
 export type ArchivedThreadProps = {
   id: string;
@@ -18,20 +21,19 @@ export function ArchivedThread({
   onSelect,
   onUnarchive,
 }: ArchivedThreadProps) {
-  const actions: ThreadAction[] = [
+  const actions: SidebarThreadAction[] = [
     {
       id: "unarchive",
-      icon: IconNames["unarchive-line"],
+      icon: ArchiveRestore,
       label: "Unarchive thread",
       onClick: onUnarchive ?? (() => {}),
-      intent: Intent.TERTIARY,
     },
   ];
 
   return (
-    <Thread
-      text={title}
-      leftIcon={IconNames["chat-3-line"]}
+    <SidebarThreadItem
+      title={title}
+      icon={MessageSquare}
       selected={selected}
       onSelect={onSelect}
       actions={actions}
